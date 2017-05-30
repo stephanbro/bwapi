@@ -106,6 +106,8 @@ struct game_vars {
   std::array<int, 12> map_player_controllers{};
   
   bool is_multi_player = false;
+  
+  std::unordered_map<std::string, std::string> override_env_var;
 };
 
 void g_global_init_if_necessary(const bwgame::global_state& global_st);
@@ -277,12 +279,14 @@ struct game_setup_helper_t {
       sync_funcs.action_st = bwgame::action_state();
       sync_funcs.sync_st = bwgame::sync_state();
       sync_funcs.sync_st.local_client->name = std::move(name);
-	sync_funcs.sync_st.latency = 3;
+      sync_funcs.sync_st.latency = 3;
       bwgame::game_load_functions load_funcs(st);
       
       (bwgame::data_loading::mpq_file<>(filename))(scenario_chk_data, "staredit/scenario.chk");
       
       auto env = [&](std::string name, std::string def) {
+        auto i = vars.override_env_var.find(name);
+        if (i != vars.override_env_var.end()) return i->second;
         const char* s = std::getenv(name.c_str());
         if (!s) return def;
         return std::string(s);
@@ -295,7 +299,7 @@ struct game_setup_helper_t {
       std::string lan_mode = env("OPENBW_LAN_MODE", default_lan_mode);
       for (auto& v : lan_mode) v &= ~0x20;
       if (lan_mode == "TCP") server_n = 1;
-      else if (lan_mode == "LOCAL" || lan_mode == "LOCAL_AUTO") server_n = 2;
+      else if (lan_mode == "LOCAL" || lan_mode=="LOCAL_FD" || lan_mode == "LOCAL_AUTO") server_n = 2;
       else if (lan_mode == "FD" || lan_mode == "FILE") server_n = 3;
 
       std::string listen_hostname = env("OPENBW_TCP_LISTEN_HOSTNAME", "0.0.0.0");
@@ -315,6 +319,7 @@ struct game_setup_helper_t {
             if (directory.empty()) directory = "/tmp/openbw";
             while (!directory.empty() && *std::prev(directory.end()) == '/') directory.erase(std::prev(directory.end()));
             mkdir(directory.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+            chmod(directory.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
             std::string path = directory + "/" + sync_funcs.sync_st.local_client->uid.str() + ".socket";
             local_server.bind(path.c_str());
             DIR* d = opendir(directory.c_str());
@@ -334,6 +339,10 @@ struct game_setup_helper_t {
               }
               closedir(d);
             }
+          } else if (lan_mode == "LOCAL_FD") {
+            std::string fd_str = env("OPENBW_LOCAL_FD", "");
+            if (fd_str.empty()) error("OPENBW_LAN_MODE is LOCAL_FD but OPENBW_LOCAL_FD not specified");
+            local_server.assign(std::atoi(fd_str.c_str()));
           } else {
             std::string path = env("OPENBW_LOCAL_PATH", "");
             if (path.empty()) error("OPENBW_LAN_MODE is LOCAL but OPENBW_LOCAL_PATH not specified");
@@ -569,6 +578,11 @@ void GameOwner::setPrintTextCallback(std::function<void (const char*)> func)
   impl->impl.print_text_callback = func;
 }
 
+
+void Game::overrideEnvVar(std::string var, std::string value)
+{
+  impl->vars.override_env_var[std::move(var)] = std::move(value);
+}
 
 int Game::g_LocalHumanID() const {
   return impl->sync_funcs.sync_st.local_client->player_slot;

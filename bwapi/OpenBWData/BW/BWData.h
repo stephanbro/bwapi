@@ -151,6 +151,8 @@ using BulletIterator = DefaultIterator<Bullet>;
 struct Game {
   openbwapi_impl* impl = nullptr;
   
+  void overrideEnvVar(std::string var, std::string value);
+  
   int g_LocalHumanID() const;
   
   Player getPlayer(int n) const;
