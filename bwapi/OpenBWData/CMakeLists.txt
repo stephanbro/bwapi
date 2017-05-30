@@ -42,3 +42,9 @@ target_link_libraries(OpenBWData Threads::Threads)
 if (WIN32)
   target_link_libraries(OpenBWData "ws2_32;mswsock")
 endif()
+
+install(TARGETS OpenBWData
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+)
