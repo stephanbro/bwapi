@@ -135,6 +135,12 @@ struct game_setup_helper_t {
   
   int server_n = 0;
   
+  std::string env(std::string name, std::string def) {
+    auto i = vars.override_env_var.find(name);
+    if (i != vars.override_env_var.end()) return i->second;
+    const char* s = std::getenv(name.c_str());
+    if (!s) return def;
+    return s;
   }
   
   void create_single_player_game(std::function<void()> setup_function) {
@@ -264,14 +270,6 @@ struct game_setup_helper_t {
       bwgame::game_load_functions load_funcs(st);
       
       (bwgame::data_loading::mpq_file<>(filename))(scenario_chk_data, "staredit/scenario.chk");
-      
-      auto env = [&](std::string name, std::string def) {
-        auto i = vars.override_env_var.find(name);
-        if (i != vars.override_env_var.end()) return i->second;
-        const char* s = std::getenv(name.c_str());
-        if (!s) return def;
-        return std::string(s);
-      };
       
       std::string default_lan_mode = "LOCAL_AUTO";
 #ifdef _WIN32
@@ -458,7 +456,14 @@ struct openbwapi_impl {
   bool ui_enabled = false;
   
   void enable_ui() {
-    ui_enabled = true;
+    if (ui_enabled) return;
+    auto str = game_setup_helper.env("OPENBW_ENABLE_UI", "1");
+    for (auto& v : str) {
+      if (v >= 'a' && v <= 'z') v &= ~0x20;
+    }
+    if (str != "0" && str != "OFF" && str != "NO" && str != "FALSE" && str != "N") {
+      ui_enabled = true;
+    }
   }
   void disable_ui() {
     ui = nullptr;
