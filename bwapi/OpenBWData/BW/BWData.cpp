@@ -656,6 +656,7 @@ void Game::QueueCommand(const void* buf, size_t size)
 void Game::leaveGame()
 {
   impl->vars.left_game = true;
+  impl->sync_funcs.leave_game();
 }
 
 u32 Game::ReplayVision() const
