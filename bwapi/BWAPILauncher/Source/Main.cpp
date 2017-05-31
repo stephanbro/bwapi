@@ -33,6 +33,7 @@ int main() {
       }
     }
     h->onGameEnd();
+    h->bwgame.leaveGame();
   } catch (const std::exception& e) {
     printf("Error: %s\n", e.what());
   }
