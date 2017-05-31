@@ -59,6 +59,7 @@ struct ui_wrapper {
     return player;
   }
   ui_wrapper(bwgame::state& st) : ui(get_player(st)) {
+    ui.exit_on_close = false;
     ui.global_volume = 0;
     auto load_data_file = bwgame::data_loading::data_files_directory(".");
     ui.load_data_file = [&](bwgame::a_vector<uint8_t>& data, bwgame::a_string filename) {
@@ -78,11 +79,17 @@ struct ui_wrapper {
     last_update = now;
     ui.update();
   }
+  bool closed() {
+    return ui.window_closed;
+  }
 };
 #else
 struct ui_wrapper {
   ui_wrapper(bwgame::state& st) {}
   void update() {
+  }
+  bool closed() {
+    return false;
   }
 };
 #endif
@@ -476,8 +483,13 @@ struct openbwapi_impl {
       game_setup_helper.next_frame();
     }
 
-    if (ui) ui->update();
-    else if (ui_enabled) {
+    if (ui) {
+      ui->update();
+      if (ui->closed()) {
+        vars.left_game = true;
+        sync_funcs.leave_game();
+      }
+    } else if (ui_enabled) {
       ui = std::make_unique<ui_wrapper>(st);
       ui->update();
     }
