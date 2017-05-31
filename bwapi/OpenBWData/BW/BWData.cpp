@@ -135,25 +135,6 @@ struct game_setup_helper_t {
   
   int server_n = 0;
   
-  std::default_random_engine rng_engine{[]{
-    std::array<unsigned int, 4> arr;
-    arr[0] = 42;
-    arr[1] = (unsigned int)std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    arr[2] = (unsigned int)std::hash<std::thread::id>()(std::this_thread::get_id());
-    arr[3] = 0;
-    std::seed_seq seq(arr.begin(), arr.end());
-    std::default_random_engine e(seq);
-    return e;
-  }()};
-
-  template<typename T>
-  auto rng(T v) {
-    std::uniform_int_distribution<T> dis(0, v - 1);
-    return dis(rng_engine);
-  }
-  template<typename T>
-  auto rng() {
-    return rng((T)0);
   }
   
   void create_single_player_game(std::function<void()> setup_function) {
