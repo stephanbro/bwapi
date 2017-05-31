@@ -142,6 +142,10 @@ struct game_setup_helper_t {
   
   int server_n = 0;
   
+  ~game_setup_helper_t() {
+    sync_funcs.leave_game();
+  }
+  
   std::string env(std::string name, std::string def) {
     auto i = vars.override_env_var.find(name);
     if (i != vars.override_env_var.end()) return i->second;
