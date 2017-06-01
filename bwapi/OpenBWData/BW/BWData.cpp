@@ -157,6 +157,7 @@ struct game_setup_helper_t {
   void create_single_player_game(std::function<void()> setup_function) {
     using bwgame::error;
     
+    vars.left_game = false;
     vars.is_multi_player = false;
   
     auto& filename = vars.set_map_filename;
@@ -234,6 +235,7 @@ struct game_setup_helper_t {
   void create_multi_player_game(std::function<void()> setup_function) {
     using bwgame::error;
     
+    vars.left_game = false;
     vars.is_multi_player = true;
   
     auto& filename = vars.set_map_filename;
@@ -659,6 +661,12 @@ void Game::leaveGame()
 {
   impl->vars.left_game = true;
   impl->sync_funcs.leave_game();
+}
+
+bool Game::gameClosed() const
+{
+  if (impl->ui) return impl->ui->closed();
+  return false;
 }
 
 u32 Game::ReplayVision() const

@@ -28,6 +28,7 @@ namespace BWAPI
     //const char* interceptFindFirstFile(const char *lpFileName);
 
     std::string autoMenuSaveReplay;
+    std::string autoMenuRestartGame;
   private:
     //static void pressDialogKey(BW::dialog *pDlg);
     
@@ -38,7 +39,6 @@ namespace BWAPI
     std::string autoMenuMode;
     std::string autoMenuCharacterName;
     std::string autoMenuLanMode;
-    std::string autoMenuRestartGame;
     std::string autoMenuGameType;
     std::string autoMenuGameTypeExtra;
     std::string autoMenuGameName;

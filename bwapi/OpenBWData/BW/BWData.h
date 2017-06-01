@@ -184,6 +184,7 @@ struct Game {
   void QueueCommand(const void* buf, size_t size);
   
   void leaveGame();
+  bool gameClosed() const;
   
   u32 ReplayVision() const;
   void setReplayVision(u32);

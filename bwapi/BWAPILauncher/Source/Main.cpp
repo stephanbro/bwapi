@@ -21,19 +21,22 @@ int main() {
     
     BWAPI::BroodwarImpl_handle h(gameOwner.getGame());
     
-    h->autoMenuManager.startGame();
-    
-    while (!h->bwgame.gameOver()) {
-      h->update();
-      h->bwgame.nextFrame();
+    do {
+      printf("start game\n");
+      h->autoMenuManager.startGame();
       
-      if (!h->externalModuleConnected) {
-        printf("No module loaded, exiting\n");
-        return 1;
+      while (!h->bwgame.gameOver()) {
+        h->update();
+        h->bwgame.nextFrame();
+        
+        if (!h->externalModuleConnected) {
+          printf("No module loaded, exiting\n");
+          return 1;
+        }
       }
-    }
-    h->onGameEnd();
-    h->bwgame.leaveGame();
+      h->onGameEnd();
+      h->bwgame.leaveGame();
+    } while (!h->bwgame.gameClosed() && h->autoMenuManager.autoMenuRestartGame != "" && h->autoMenuManager.autoMenuRestartGame != "OFF");
   } catch (const std::exception& e) {
     printf("Error: %s\n", e.what());
   }
