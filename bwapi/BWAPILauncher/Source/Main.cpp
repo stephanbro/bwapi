@@ -22,7 +22,6 @@ int main() {
     BWAPI::BroodwarImpl_handle h(gameOwner.getGame());
     
     do {
-      printf("start game\n");
       h->autoMenuManager.startGame();
       
       while (!h->bwgame.gameOver()) {
