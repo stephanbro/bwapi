@@ -142,10 +142,6 @@ struct game_setup_helper_t {
   
   int server_n = 0;
   
-  ~game_setup_helper_t() {
-    sync_funcs.leave_game();
-  }
-  
   std::string env(std::string name, std::string def) {
     auto i = vars.override_env_var.find(name);
     if (i != vars.override_env_var.end()) return i->second;
@@ -399,6 +395,14 @@ struct game_setup_helper_t {
     vars.map_filename = filename;
   }
   
+  template<typename server_T>
+  void leave_game(server_T& server) {
+    
+    vars.left_game = true;
+    sync_funcs.leave_game(server);
+    
+  }
+  
   void start_game() {
     if (server_n == 0) sync_funcs.start_game(noop_server);
     else if (server_n == 1) sync_funcs.start_game(tcp_server);
@@ -441,6 +445,13 @@ struct game_setup_helper_t {
     else if (server_n == 1) sync_funcs.bwapi_compatible_next_frame(tcp_server);
     else if (server_n == 2) sync_funcs.bwapi_compatible_next_frame(local_server);
     else if (server_n == 3) sync_funcs.bwapi_compatible_next_frame(file_server);
+  }
+  
+  void leave_game() {
+    if (server_n == 0) leave_game(noop_server);
+    else if (server_n == 1) leave_game(tcp_server);
+    else if (server_n == 2) leave_game(local_server);
+    else if (server_n == 3) leave_game(file_server);
   }
   
 };
@@ -492,8 +503,7 @@ struct openbwapi_impl {
     if (ui) {
       ui->update();
       if (ui->closed()) {
-        vars.left_game = true;
-        sync_funcs.leave_game();
+        game_setup_helper.leave_game();
       }
     } else if (ui_enabled) {
       ui = std::make_unique<ui_wrapper>(st);
@@ -659,8 +669,7 @@ void Game::QueueCommand(const void* buf, size_t size)
 
 void Game::leaveGame()
 {
-  impl->vars.left_game = true;
-  impl->sync_funcs.leave_game();
+  impl->game_setup_helper.leave_game();
 }
 
 bool Game::gameClosed() const
