@@ -175,6 +175,7 @@ struct Game {
   void nextFrame();
   void setGUI(bool enabled);
   void enableCheats() const;
+  void saveReplay(const std::string& filename);
   
   template<typename T, typename... args_T>
   void QueueCommand(args_T&&... args) {

@@ -4,6 +4,7 @@
 #include "actions.h"
 #include "replay.h"
 #include "sync.h"
+#include "replay_saver.h"
 #include "sync_server_asio_tcp.h"
 #ifndef _WIN32
 #include "sync_server_asio_local.h"
@@ -192,21 +193,30 @@ struct game_setup_helper_t {
     } else {
       
       auto name = sync_funcs.sync_st.local_client->name;
+      auto* save_replay = sync_funcs.sync_st.save_replay;
       sync_funcs.action_st = bwgame::action_state();
       sync_funcs.sync_st = bwgame::sync_state();
       sync_funcs.sync_st.local_client->name = std::move(name);
+      sync_funcs.sync_st.save_replay = save_replay;
+      if (save_replay) *save_replay = bwgame::replay_saver_state();
       bwgame::game_load_functions load_funcs(st);
       
       (bwgame::data_loading::mpq_file<>(filename))(scenario_chk_data, "staredit/scenario.chk");
+      
+      if (save_replay) {
+        save_replay->map_data = scenario_chk_data.data();
+        save_replay->map_data_size = scenario_chk_data.size();
+      }
     
       load_funcs.load_map_data(scenario_chk_data.data(), scenario_chk_data.size(), [&]() {
         
         sync_funcs.sync_st.game_type_melee = vars.game_type_melee;
         if (vars.game_type_melee) {
           load_funcs.setup_info.victory_condition = 1;
-          load_funcs.setup_info.starting_units = 1;
+          load_funcs.setup_info.starting_units = 2;
           load_funcs.setup_info.resource_type = 1;
         }
+        sync_funcs.sync_st.setup_info = &load_funcs.setup_info;
 
         while (!sync_funcs.sync_st.game_started) {
           sync_funcs.sync(noop_server);
@@ -220,6 +230,8 @@ struct game_setup_helper_t {
           }
           setup_function();
         }
+        
+        sync_funcs.sync_st.setup_info = nullptr;
       });
     
       vars.is_replay = false;
@@ -272,13 +284,21 @@ struct game_setup_helper_t {
     } else {
       
       auto name = sync_funcs.sync_st.local_client->name;
+      auto* save_replay = sync_funcs.sync_st.save_replay;
       sync_funcs.action_st = bwgame::action_state();
       sync_funcs.sync_st = bwgame::sync_state();
       sync_funcs.sync_st.local_client->name = std::move(name);
+      sync_funcs.sync_st.save_replay = save_replay;
+      if (save_replay) *save_replay = bwgame::replay_saver_state();
       sync_funcs.sync_st.latency = 3;
       bwgame::game_load_functions load_funcs(st);
       
       (bwgame::data_loading::mpq_file<>(filename))(scenario_chk_data, "staredit/scenario.chk");
+      
+      if (save_replay) {
+        save_replay->map_data = scenario_chk_data.data();
+        save_replay->map_data_size = scenario_chk_data.size();
+      }
       
       std::string default_lan_mode = "LOCAL_AUTO";
 #ifdef _WIN32
@@ -378,6 +398,7 @@ struct game_setup_helper_t {
           load_funcs.setup_info.victory_condition = 1;
           load_funcs.setup_info.starting_units = 1;
         }
+        sync_funcs.sync_st.setup_info = &load_funcs.setup_info;
 
         while (!sync_funcs.sync_st.game_started) {
           if (server_n == 0) sync_funcs.sync(noop_server);
@@ -387,6 +408,8 @@ struct game_setup_helper_t {
           vars.local_player_id = sync_funcs.sync_st.local_client->player_slot;
           setup_function();
         }
+        
+        sync_funcs.sync_st.setup_info = nullptr;
       });
     
       vars.is_replay = false;
@@ -555,9 +578,11 @@ struct full_state {
   bwgame::action_state action_st;
   bwgame::replay_state replay_st;
   bwgame::sync_state sync_st;
+  bwgame::replay_saver_state replay_saver_st;
   full_state() {
     st.global = &global_st;
     st.game = &game_st;
+    sync_st.save_replay = &replay_saver_st;
   }
 };
 
@@ -1057,7 +1082,16 @@ void Game::setGUI(bool enabled)
 
 void Game::enableCheats() const
 {
-    impl->funcs.st.cheats_enabled = true;
+  impl->funcs.st.cheats_enabled = true;
+}
+
+void Game::saveReplay(const std::string& filename)
+{
+  if (impl->sync_funcs.sync_st.save_replay) {
+    bwgame::replay_saver_functions replay_saver_funcs(*impl->sync_funcs.sync_st.save_replay);
+    bwgame::data_loading::file_writer<> w(filename.c_str());
+    replay_saver_funcs.save_replay(impl->st.current_frame, w);
+  }
 }
 
 size_t Game::regionCount() const

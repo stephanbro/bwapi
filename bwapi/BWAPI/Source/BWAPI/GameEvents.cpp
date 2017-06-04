@@ -1,5 +1,5 @@
 #include "GameImpl.h"
-#include <ctime>
+#include <time.h>
 
 #include <Util/StringUtil.h>
 
@@ -12,6 +12,16 @@
 #include "../../../Debug.h"
 
 #include <chrono>
+#include <codecvt>
+
+#ifdef _WIN32
+#include <windows.h>
+#undef min
+#undef max
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
 
 namespace BWAPI
 {
@@ -294,60 +304,85 @@ namespace BWAPI
     //this is called at the end of every match
     if ( !this->onStartCalled )
       return;
+    
+    if ( autoMenuManager.autoMenuSaveReplay != "" && !this->isReplay() )
+    {
+      std::string pathStr = autoMenuManager.autoMenuSaveReplay;
+      
+      auto replace = [&](std::string name, std::string value) {
+        name = '%' + name + '%';
+        for (size_t i = 0;;) {
+          i = pathStr.find(name, i);
+          if (i == std::string::npos) break;
+          pathStr.replace(i, name.size(), value);
+          ++i;
+        }
+      };
+      
+      replace("BOTNAME",    rn_BWAPIName.c_str());
+      replace("BOTNAME6",   rn_BWAPIName.substr(0,6).c_str());
+      replace("BOTRACE",    rn_BWAPIRace.c_str());
+      replace("MAP",        rn_MapName.c_str());
+      replace("ALLYNAMES",  rn_AlliesNames.c_str());
+      replace("ALLYRACES",  rn_AlliesRaces.c_str());
+      replace("ENEMYNAMES", rn_EnemiesNames.c_str());
+      replace("ENEMYRACES", rn_EnemiesRaces.c_str());
+      replace("GAMERESULT", rn_GameResult.c_str ());
 
-//    if ( autoMenuManager.autoMenuSaveReplay != "" && !this->isReplay() )
-//    {
-//      // Set replay envvars
-//      SetEnvironmentVariableA("BOTNAME",    rn_BWAPIName.c_str());
-//      SetEnvironmentVariableA("BOTNAME6",   rn_BWAPIName.substr(0,6).c_str());
-//      SetEnvironmentVariableA("BOTRACE",    rn_BWAPIRace.c_str());
-//      SetEnvironmentVariableA("MAP",        rn_MapName.c_str());
-//      SetEnvironmentVariableA("ALLYNAMES",  rn_AlliesNames.c_str());
-//      SetEnvironmentVariableA("ALLYRACES",  rn_AlliesRaces.c_str());
-//      SetEnvironmentVariableA("ENEMYNAMES", rn_EnemiesNames.c_str());
-//      SetEnvironmentVariableA("ENEMYRACES", rn_EnemiesRaces.c_str());
-//      SetEnvironmentVariableA("GAMERESULT", rn_GameResult.c_str ());
+      // Double any %'s remaining in the string so that strftime executes correctly
+      {
+        size_t tmp = std::string::npos;
+        while (tmp = pathStr.find_last_of('%', tmp - 1), tmp != std::string::npos)
+          pathStr.insert(tmp, "%");
+      }
 
-//      // Expand environment strings to szInterPath
-//      char szTmpPath[MAX_PATH] = { 0 };
-//      ExpandEnvironmentStringsA(autoMenuManager.autoMenuSaveReplay.c_str(), szTmpPath, MAX_PATH);
+      // Replace the placeholder $'s with %'s for the strftime call
+      std::replace(pathStr.begin(), pathStr.end(), '$', '%');
 
-//      std::string pathStr(szTmpPath);
+      // Get time
+      time_t tmpTime = std::time(nullptr);
+      tm timeInfo;
+#ifdef _MSC_VER
+      localtime_s(&timeInfo, &tmpTime);
+#else
+      localtime_r(&tmpTime, &timeInfo);
+#endif
 
-//      // Double any %'s remaining in the string so that strftime executes correctly
-//      {
-//        size_t tmp = std::string::npos;
-//        while (tmp = pathStr.find_last_of('%', tmp - 1), tmp != std::string::npos)
-//          pathStr.insert(tmp, "%");
-//      }
+      // Expand time strings, add a handler for this specific task to ignore errors in the format string
+      char buf[0x100];
+      std::strftime(buf, sizeof(buf), pathStr.c_str(), &timeInfo);
+      pathStr = buf;
 
-//      // Replace the placeholder $'s with %'s for the strftime call
-//      std::replace(pathStr.begin(), pathStr.end(), '$', '%');
+      std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
+      // Remove illegal characters
+      pathStr.erase(std::remove_if(pathStr.begin(), pathStr.end(),
+                                   [](char c) {
+                                     if ((unsigned char)c >= 128) return false;
+                                     if (c >= 'a' && c <= 'z') return false;
+                                     if (c >= 'A' && c <= 'Z') return false;
+                                     if (c >= '0' && c <= '9') return false;
+                                     if (c == '-' || c == '-') return false;
+                                     if (c == '_' || c == '_') return false;
+                                     if (c == '.') return false;
+                                     if (c == '/') return false;
+                                     if (c == ' ') return false;
+                                     return true;
+                                   }), pathStr.end());
 
-//      // Get time
-//      time_t tmpTime = std::time(nullptr);
-//      tm *timeInfo = std::localtime(&tmpTime);
-
-//      // Expand time strings, add a handler for this specific task to ignore errors in the format string
-//      // TODO: Replace with boost time format
-//      _invalid_parameter_handler old = _set_invalid_parameter_handler(&ignore_invalid_parameter);
-//        std::strftime(szTmpPath, sizeof(szTmpPath), pathStr.c_str(), timeInfo);
-//      _set_invalid_parameter_handler(old);
-//      pathStr = szTmpPath;
-
-//      // Remove illegal characters
-//      pathStr.erase(std::remove_if(pathStr.begin(), pathStr.end(),
-//                                   [](char c) {
-//                                     return iscntrl(reinterpret_cast<unsigned char&>(c)) || c == '?' || c == '*' ||
-//                                         c == '<' || c == '|' || c == '>' || c == '"';
-//                                   }), pathStr.end());
-
-//      Util::Path parent_p = Util::Path(pathStr).parent_path();
-//      Util::create_directories(parent_p);
-
-//      // Copy to global desired replay name
-//      gDesiredReplayName = pathStr;
-//    }
+      for (size_t i = 0; i != pathStr.size(); ++i) {
+        if (pathStr[i] == '/') {
+          std::string n(pathStr.c_str(), i);
+#ifdef _WIN32
+          std::u16string u16_n= std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.from_bytes(n);
+          CreateDirectoryW(u16_n.c_str(), nullptr);
+#else
+          mkdir(n.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+#endif
+        }
+      }
+      
+      bwgame.saveReplay(pathStr);
+    }
 
     if ( !this->calledMatchEnd )
     {
