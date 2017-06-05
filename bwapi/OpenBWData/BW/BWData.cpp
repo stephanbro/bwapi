@@ -334,7 +334,7 @@ struct game_setup_helper_t {
             if (d) {
               dirent* e;
               std::string fn;
-              while (e = readdir(d)) {
+              while ((e = readdir(d))) {
                 if (!strcmp(e->d_name, ".")) continue;
                 if (!strcmp(e->d_name, "..")) continue;
                 fn = directory + "/" + e->d_name;
@@ -396,7 +396,8 @@ struct game_setup_helper_t {
         sync_funcs.sync_st.game_type_melee = vars.game_type_melee;
         if (vars.game_type_melee) {
           load_funcs.setup_info.victory_condition = 1;
-          load_funcs.setup_info.starting_units = 1;
+          load_funcs.setup_info.starting_units = 2;
+          load_funcs.setup_info.resource_type = 1;
         }
         sync_funcs.sync_st.setup_info = &load_funcs.setup_info;
 
