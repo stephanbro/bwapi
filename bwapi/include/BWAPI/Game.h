@@ -1736,6 +1736,9 @@ namespace BWAPI
     virtual void createMultiPlayerGame(std::function<void()> setupFunction) = 0;
     virtual void startGame() = 0;
     virtual void switchToPlayer(Player p) = 0;
+    virtual Unit createUnit(Player player, UnitType type, Position pos) = 0;
+    virtual void killUnit(Unit u) = 0;
+    virtual void removeUnit(Unit u) = 0;
   };
 
   extern Game *BroodwarPtr;

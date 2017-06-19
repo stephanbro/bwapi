@@ -197,6 +197,9 @@ namespace BWAPI
       virtual void createMultiPlayerGame(std::function<void()> setupFunction) override;
       virtual void startGame() override;
       virtual void switchToPlayer(Player p) override;
+      virtual Unit createUnit(Player player, UnitType type, Position pos) override;
+      virtual void killUnit(Unit u) override;
+      virtual void removeUnit(Unit u) override;
 
       //Internal BWAPI commands:
       GameImpl(BW::Game bwgame);

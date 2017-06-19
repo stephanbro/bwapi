@@ -1111,6 +1111,24 @@ Region Game::getRegionAt(int x, int y) const
   return {impl->funcs.get_region_at({x, y})->index, impl};
 }
 
+Unit Game::createUnit(int owner, int unitType, int x, int y)
+{
+  return {impl->funcs.trigger_create_unit(impl->funcs.get_unit_type((bwgame::UnitTypes)unitType), {x, y}, owner), impl};
+}
+
+void Game::killUnit(Unit u)
+{
+  if (u.u) impl->funcs.kill_unit(u.u);
+}
+
+void Game::removeUnit(Unit u)
+{
+  if (u.u) {
+        impl->funcs.hide_unit(u.u);
+        impl->funcs.kill_unit(u.u);
+  }
+}
+
 
 int Player::playerColorIndex() const
 {

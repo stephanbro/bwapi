@@ -961,5 +961,22 @@ namespace BWAPI
       bwgame.switchToSlot(((PlayerImpl*)p)->getIndex());
     }
   }
+  Unit GameImpl::createUnit(Player player, UnitType type, Position pos)
+  {
+    UnitImpl* u = getUnitFromBWUnit(bwgame.createUnit(((PlayerImpl*)player)->getIndex(), type.getID(), pos.x, pos.y));
+    if (u) {
+      u->updateInternalData();
+    }
+    return u;
+  }
+  void GameImpl::killUnit(Unit u)
+  {
+    bwgame.killUnit(((UnitImpl*)u)->bwunit);
+  }
+  void GameImpl::removeUnit(Unit u)
+  {
+    bwgame.removeUnit(((UnitImpl*)u)->bwunit);
+  }
+
 }
 

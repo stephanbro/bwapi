@@ -247,6 +247,10 @@ struct Game {
   size_t regionCount() const;
   Region getRegion(size_t index) const;
   Region getRegionAt(int x, int y) const;
+
+  Unit createUnit(int owner, int unitType, int x, int y);
+  void killUnit(Unit u);
+  void removeUnit(Unit u);
 };
 
 struct Player {
