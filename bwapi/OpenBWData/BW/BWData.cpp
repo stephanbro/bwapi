@@ -29,6 +29,7 @@
 #include <functional>
 #include <cstdlib>
 #include <cstring>
+#include <condition_variable>
 
 using bwgame::error;
 
@@ -51,46 +52,80 @@ namespace BW {
 
 #ifdef OPENBW_ENABLE_UI
 struct ui_wrapper {
-  bwgame::ui_functions ui;
   std::chrono::high_resolution_clock clock;
   std::chrono::high_resolution_clock::time_point last_update;
+  std::thread ui_thread;
+  bool exit_thread = false;
+  bool run_update = false;
+  std::mutex mut;
+  std::condition_variable cv;
+  int game_speed = 0;
+  bool window_closed = false;
   bwgame::game_player get_player(bwgame::state& st) {
     bwgame::game_player player;
     player.set_st(st);
     return player;
   }
-  ui_wrapper(bwgame::state& st, std::string mpq_path) : ui(get_player(st)) {
-    ui.exit_on_close = false;
-    ui.global_volume = 0;
-    auto load_data_file = bwgame::data_loading::data_files_directory(mpq_path.c_str());
-    ui.load_data_file = [&](bwgame::a_vector<uint8_t>& data, bwgame::a_string filename) {
-      load_data_file(data, std::move(filename));
-    };
-    ui.init();
+  ui_wrapper(bwgame::state& st, std::string mpq_path) {
 
-    size_t screen_width = 800;
-    size_t screen_height = 600;
+    ui_thread = std::thread([this, player = get_player(st), mpq_path]() mutable {
+      std::unique_lock<std::mutex> l(mut);
+      bwgame::ui_functions ui(std::move(player));
 
-    ui.resize(screen_width, screen_height);
-    ui.screen_pos = {(int)ui.game_st.map_width / 2 - (int)screen_width / 2, (int)ui.game_st.map_height / 2 - (int)screen_height / 2};
+      ui.exit_on_close = false;
+      ui.global_volume = 0;
+      auto load_data_file = bwgame::data_loading::data_files_directory(mpq_path.c_str());
+      ui.load_data_file = [&](bwgame::a_vector<uint8_t>& data, bwgame::a_string filename) {
+        load_data_file(data, std::move(filename));
+      };
+      ui.init();
+
+      size_t screen_width = 800;
+      size_t screen_height = 600;
+
+      ui.resize(screen_width, screen_height);
+      ui.screen_pos = {(int)ui.game_st.map_width / 2 - (int)screen_width / 2, (int)ui.game_st.map_height / 2 - (int)screen_height / 2};
+
+      while (!exit_thread) {
+        cv.wait_for(l, std::chrono::milliseconds(42), [&]{
+          return run_update || exit_thread;
+        });
+        run_update = false;
+
+        last_update = clock.now();
+        ui.update();
+        window_closed = ui.window_closed;
+      }
+    });
+
+  }
+  ~ui_wrapper() {
+    exit_thread = true;
+    cv.notify_all();
+    ui_thread.join();
   }
   void update() {
     auto now = clock.now();
     if (now - last_update < std::chrono::milliseconds(40)) return;
-    last_update = now;
-    ui.update();
+    run_update = true;
+    cv.notify_all();
   }
   bool closed() {
-    return ui.window_closed;
+    return window_closed;
+  }
+  auto get_lock() {
+    return std::unique_lock<std::mutex>(mut);
   }
 };
 #else
 struct ui_wrapper {
   ui_wrapper(bwgame::state& st, std::string mpq_path) {}
-  void update() {
-  }
+  void update() {}
   bool closed() {
     return false;
+  }
+  auto get_lock() {
+    return 0;
   }
 };
 #endif
@@ -498,6 +533,9 @@ struct openbwapi_impl {
   game_setup_helper_t game_setup_helper{st, vars, replay_funcs, sync_funcs};
   std::function<void(const char*)> print_text_callback;
   std::unique_ptr<ui_wrapper> ui;
+  using clock_t = std::chrono::high_resolution_clock;
+  clock_t clock;
+  clock_t::time_point last_frame;
   
   openbwapi_impl(game_vars& vars, bwgame::state& st, bwgame::action_state& action_st, bwgame::replay_state& replay_st, bwgame::sync_state& sync_st) : vars(vars), st(st), funcs(vars, st), replay_funcs(vars, st, action_st, replay_st), sync_funcs(vars, st, action_st, sync_st) {}
   
@@ -519,9 +557,17 @@ struct openbwapi_impl {
   }
 
   void next_frame() {
-    if (vars.is_replay) replay_funcs.next_frame();
-    else {
-      game_setup_helper.next_frame();
+    if (ui) {
+      auto l = ui->get_lock();
+      if (vars.is_replay) replay_funcs.next_frame();
+      else {
+        game_setup_helper.next_frame();
+      }
+    } else {
+      if (vars.is_replay) replay_funcs.next_frame();
+      else {
+        game_setup_helper.next_frame();
+      }
     }
 
     if (ui) {
@@ -532,6 +578,18 @@ struct openbwapi_impl {
     } else if (ui_enabled) {
       ui = std::make_unique<ui_wrapper>(st, game_setup_helper.env("OPENBW_MPQ_PATH", "."));
       ui->update();
+    }
+
+    auto now = clock.now();
+    auto speed = std::chrono::milliseconds(vars.game_speeds_frame_times.back());
+    last_frame += speed;
+    auto frame_t = now - last_frame;
+    if (frame_t > speed * 8) {
+      last_frame = now - speed * 8;
+      frame_t = speed * 8;
+    }
+    if (frame_t < speed) {
+      std::this_thread::sleep_for(speed - frame_t);
     }
   }
 };
@@ -876,7 +934,6 @@ const char* Game::forceNames(size_t n) const
 }
 
 template<typename T>
-//using itobj = typename std::conditional<std::is_same<T, Unit>::value, bwgame::intrusive_list<bwgame::unit_t, bwgame::default_link_f>, bwgame::intrusive_list<bwgame::bullet_t, bwgame::default_link_f>>::type::iterator;
 using itobj = typename std::conditional<std::is_same<T, Unit>::value, decltype(bwgame::state::visible_units), decltype(bwgame::state::active_bullets)>::type::iterator;
 
 BulletIterator Game::BulletNodeTable_begin() const
