@@ -59,10 +59,10 @@ struct ui_wrapper {
     player.set_st(st);
     return player;
   }
-  ui_wrapper(bwgame::state& st) : ui(get_player(st)) {
+  ui_wrapper(bwgame::state& st, std::string mpq_path) : ui(get_player(st)) {
     ui.exit_on_close = false;
     ui.global_volume = 0;
-    auto load_data_file = bwgame::data_loading::data_files_directory(".");
+    auto load_data_file = bwgame::data_loading::data_files_directory(mpq_path.c_str());
     ui.load_data_file = [&](bwgame::a_vector<uint8_t>& data, bwgame::a_string filename) {
       load_data_file(data, std::move(filename));
     };
@@ -86,7 +86,7 @@ struct ui_wrapper {
 };
 #else
 struct ui_wrapper {
-  ui_wrapper(bwgame::state& st) {}
+  ui_wrapper(bwgame::state& st, std::string mpq_path) {}
   void update() {
   }
   bool closed() {
@@ -118,7 +118,7 @@ struct game_vars {
   std::unordered_map<std::string, std::string> override_env_var;
 };
 
-void g_global_init_if_necessary(const bwgame::global_state& global_st);
+void g_global_init_if_necessary(const bwgame::global_state& global_st, std::string mpq_path);
 
 struct game_setup_helper_t {
   bwgame::state& st;
@@ -165,8 +165,8 @@ struct game_setup_helper_t {
     st = bwgame::state();
     st.global = &global_st;
     st.game = &game_st;
-    
-    g_global_init_if_necessary(global_st);
+
+    g_global_init_if_necessary(global_st, env("OPENBW_MPQ_PATH", "."));
     
     scenario_chk_data.clear();
   
@@ -255,7 +255,7 @@ struct game_setup_helper_t {
     st.global = &global_st;
     st.game = &game_st;
     
-    g_global_init_if_necessary(global_st);
+    g_global_init_if_necessary(global_st, env("OPENBW_MPQ_PATH", "."));
     
     scenario_chk_data.clear();
   
@@ -530,7 +530,7 @@ struct openbwapi_impl {
         game_setup_helper.leave_game();
       }
     } else if (ui_enabled) {
-      ui = std::make_unique<ui_wrapper>(st);
+      ui = std::make_unique<ui_wrapper>(st, game_setup_helper.env("OPENBW_MPQ_PATH", "."));
       ui->update();
     }
   }
@@ -558,17 +558,17 @@ struct init_safe_global {
 init_safe_global<bwgame::global_state> g_global_st;
 bool global_inited = false;
 init_safe_global<std::mutex> global_init_mut;
-void g_global_init() {
+void g_global_init(std::string mpq_path) {
   if (global_inited) return;
   std::lock_guard<std::mutex> l(*global_init_mut);
   if (global_inited) return;
-  bwgame::global_init(*g_global_st, bwgame::data_loading::data_files_directory("."));
+  bwgame::global_init(*g_global_st, bwgame::data_loading::data_files_directory(mpq_path.c_str()));
   global_inited = true;
 }
 
-void g_global_init_if_necessary(const bwgame::global_state& global_st) {
+void g_global_init_if_necessary(const bwgame::global_state& global_st, std::string mpq_path) {
   if ((void*)&global_st == (void*)&g_global_st.buf) {
-    g_global_init();
+    g_global_init(std::move(mpq_path));
   }
 }
 
