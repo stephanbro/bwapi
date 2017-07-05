@@ -373,8 +373,8 @@ namespace BWAPI
         if (pathStr[i] == '/') {
           std::string n(pathStr.c_str(), i);
 #ifdef _WIN32
-          std::u16string u16_n= std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.from_bytes(n);
-          CreateDirectoryW(u16_n.c_str(), nullptr);
+          std::wstring u16_n= std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}.from_bytes(n);
+		  CreateDirectoryW(u16_n.c_str(), nullptr);
 #else
           mkdir(n.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
 #endif
