@@ -148,6 +148,16 @@ struct DefaultIterator {
 using UnitIterator = DefaultIterator<Unit>;
 using BulletIterator = DefaultIterator<Bullet>;
 
+struct snapshot_impl;
+
+struct Snapshot {
+  Snapshot();
+  Snapshot(Snapshot&&);
+  ~Snapshot();
+  Snapshot& operator=(Snapshot&&);
+  std::unique_ptr<snapshot_impl> impl;
+};
+
 struct Game {
   openbwapi_impl* impl = nullptr;
   
@@ -251,6 +261,11 @@ struct Game {
   Unit createUnit(int owner, int unitType, int x, int y);
   void killUnit(Unit u);
   void removeUnit(Unit u);
+
+  Snapshot saveSnapshot();
+  void loadSnapshot(const Snapshot&);
+  void setRandomSeed(uint32_t value);
+  void disableTriggers();
 };
 
 struct Player {

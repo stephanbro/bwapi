@@ -2,6 +2,7 @@
 #include <string>
 #include <list>
 #include <deque>
+#include <unordered_map>
 
 #include <Util/Types.h>
 #include <BW/Constants.h>
@@ -11,6 +12,7 @@
 #include <BWAPI/Server.h>
 #include <BWAPI/Map.h>
 #include <BWAPI/Client/GameData.h>
+#include <BWAPI/Client/PlayerData.h>
 #include <BWAPI/TournamentAction.h>
 #include <BWAPI/CoordinateType.h>
 
@@ -48,6 +50,23 @@ namespace BWAPI
   class Playerset;
   class UnitImpl;
   class Unitset;
+
+  struct Snapshot {
+    BW::Snapshot bwsnapshot;
+    struct Player {
+      PlayerData data;
+      s32 _repairedMinerals;
+      s32 _repairedGas;
+      s32 _refundedMinerals;
+      s32 _refundedGas;
+      bool wasSeenByBWAPIPlayer = false;
+    };
+    std::vector<Player> players;
+    std::array<bool,BWAPI::Flag::Max> flags;
+    int frameCount;
+    int commandOptimizerLevel;
+    u32 cheatFlags;
+  };
 
   /** The main class wrapping the whole game data/methods. */
   class GameImpl : public Game
@@ -200,6 +219,12 @@ namespace BWAPI
       virtual Unit createUnit(Player player, UnitType type, Position pos) override;
       virtual void killUnit(Unit u) override;
       virtual void removeUnit(Unit u) override;
+      virtual void saveSnapshot(std::string id) override;
+      virtual void loadSnapshot(const std::string& id) override;
+      virtual void deleteSnapshot(const std::string& id) override;
+      virtual std::vector<std::string> listSnapshots() override;
+      virtual void setRandomSeed(uint32_t value) override;
+      virtual void disableTriggers() override;
 
       //Internal BWAPI commands:
       GameImpl(BW::Game bwgame);
@@ -311,6 +336,8 @@ namespace BWAPI
       
       int bulletNextId;
       bool externalModuleConnected = false;
+
+      std::unordered_map<std::string, Snapshot> snapshots;
     private:
       std::vector<PlayerImpl*> droppedPlayers;
 

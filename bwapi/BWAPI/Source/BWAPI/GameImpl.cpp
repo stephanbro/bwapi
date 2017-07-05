@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <stdexcept>
 
 #include <Util/Clamp.h>
 #include <Util/Convenience.h>
@@ -977,6 +978,136 @@ namespace BWAPI
   {
     bwgame.removeUnit(((UnitImpl*)u)->bwunit);
   }
+
+  void BWAPI::GameImpl::saveSnapshot(std::string id)
+  {
+    Snapshot s;
+    s.bwsnapshot = bwgame.saveSnapshot();
+    s.players.resize(BW::PLAYER_COUNT);
+    for (size_t i = 0; i != BW::PLAYER_COUNT; ++i) {
+      auto& src = *players[i];
+      auto& dst = s.players[i];
+      dst.data = src.data;
+      dst._repairedMinerals = src._repairedMinerals;
+      dst._repairedGas = src._repairedGas;
+      dst._refundedMinerals = src._refundedMinerals;
+      dst._refundedGas = src._refundedGas;
+      dst.wasSeenByBWAPIPlayer = src.wasSeenByBWAPIPlayer;
+    }
+    s.frameCount = frameCount;
+    s.flags = flags;
+    s.commandOptimizerLevel = commandOptimizer.level;
+    s.cheatFlags = cheatFlags;
+    snapshots[std::move(id)] = std::move(s);
+  }
+
+  void GameImpl::loadSnapshot(const std::string &id)
+  {
+    auto i = snapshots.find(id);
+    if (i == snapshots.end()) throw std::runtime_error("no such snapshot");
+    auto& s = i->second;
+    bwgame.loadSnapshot(s.bwsnapshot);
+
+    for (size_t i = 0; i != BW::PLAYER_COUNT; ++i) {
+      auto& dst = *players[i];
+      auto& src = s.players[i];
+      dst.data = src.data;
+      dst._repairedMinerals = src._repairedMinerals;
+      dst._repairedGas = src._repairedGas;
+      dst._refundedMinerals = src._refundedMinerals;
+      dst._refundedGas = src._refundedGas;
+      dst.wasSeenByBWAPIPlayer = src.wasSeenByBWAPIPlayer;
+
+      dst.units.clear();
+    }
+
+    this->aliveUnits.clear();
+    this->dyingUnits.clear();
+    this->discoverUnits.clear();
+    this->accessibleUnits.clear();
+    this->evadeUnits.clear();
+    this->selectedUnitSet.clear();
+    this->startLocations.clear();
+    this->playerSet.clear();
+    this->minerals.clear();
+    this->geysers.clear();
+    this->neutralUnits.clear();
+    this->bullets.clear();
+    this->pylons.clear();
+    this->staticMinerals.clear();
+    this->staticGeysers.clear();
+    this->staticNeutralUnits.clear();
+    this->_allies.clear();
+    this->_enemies.clear();
+    this->_observers.clear();
+
+    this->savedUnitSelection.fill(nullptr);
+    this->wantSelectionUpdate = false;
+
+    frameCount = s.frameCount;
+    flags = s.flags;
+
+    for(unsigned int j = 0; j < this->commandBuffer.size(); ++j)
+      for (unsigned int i = 0; i < this->commandBuffer[j].size(); ++i)
+        delete this->commandBuffer[j][i];
+    this->commandBuffer.clear();
+    this->commandBuffer.reserve(16);
+
+    commandOptimizer.init();
+    commandOptimizer.level = s.commandOptimizerLevel;
+
+    for ( Unitset::iterator d = this->deadUnits.begin(); d != this->deadUnits.end(); ++d )
+      delete static_cast<UnitImpl*>(*d);
+    this->deadUnits.clear();
+
+    for (UnitImpl* u : unitArray)
+    {
+      if (!u) continue;
+      u->clear();
+      u->userSelected = false;
+      u->isAlive = false;
+      u->wasAlive = false;
+      u->wasCompleted = false;
+      u->wasAccessible = false;
+      u->wasVisible = false;
+      u->nukeDetected = false;
+      u->lastType = UnitTypes::Unknown;
+      u->lastPlayer = nullptr;
+
+      u->setID(-1);
+    }
+
+    this->bulletNextId = 0;
+    this->cheatFlags = s.cheatFlags;
+
+    updateUnits();
+    updateUnits();
+    events.clear();
+  }
+
+  void GameImpl::deleteSnapshot(const std::string &id)
+  {
+    auto i = snapshots.find(id);
+    if (i != snapshots.end()) snapshots.erase(i);
+  }
+
+  std::vector<std::string> GameImpl::listSnapshots()
+  {
+    std::vector<std::string> r;
+    for (auto& v : snapshots) r.push_back(v.first);
+    return r;
+  }
+
+  void GameImpl::setRandomSeed(uint32_t value)
+  {
+    bwgame.setRandomSeed(value);
+  }
+
+  void GameImpl::disableTriggers()
+  {
+    bwgame.disableTriggers();
+  }
+
 
 }
 

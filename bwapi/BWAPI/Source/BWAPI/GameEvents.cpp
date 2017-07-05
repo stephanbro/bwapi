@@ -474,7 +474,8 @@ namespace BWAPI
     //This function translates events into AIModule callbacks
     if ( !client || server.isConnected() )
       return;
-    for (Event e : events)
+    auto eventsCopy = events;
+    for (Event e : eventsCopy)
     {
       std::chrono::high_resolution_clock::time_point startTime;
 
@@ -482,7 +483,7 @@ namespace BWAPI
       if ( tournamentAI )
       {
         this->lastEventTime = 0;
-	  startTime == std::chrono::high_resolution_clock::now();
+        startTime == std::chrono::high_resolution_clock::now();
       }
 
       // Send event to the AI Client module
@@ -493,12 +494,14 @@ namespace BWAPI
         continue;
 
       // Save the last event time
-	this->lastEventTime = (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTime).count();
+       this->lastEventTime = (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTime).count();
 
       // Send same event to the Tournament module for post-processing
       isTournamentCall = true;
       SendClientEvent(tournamentAI, e);
       isTournamentCall = false;
+
+      if (events.empty()) break;
     } // foreach event
   }
 }

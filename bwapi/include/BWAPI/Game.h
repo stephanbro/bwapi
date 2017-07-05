@@ -1739,6 +1739,13 @@ namespace BWAPI
     virtual Unit createUnit(Player player, UnitType type, Position pos) = 0;
     virtual void killUnit(Unit u) = 0;
     virtual void removeUnit(Unit u) = 0;
+    virtual void saveSnapshot(std::string id) = 0;
+    virtual void loadSnapshot(const std::string& id) = 0;
+    virtual void deleteSnapshot(const std::string& id) = 0;
+    virtual std::vector<std::string> listSnapshots() = 0;
+    virtual void setRandomSeed(uint32_t value) = 0;
+    virtual void disableTriggers() = 0;
+
   };
 
   extern Game *BroodwarPtr;

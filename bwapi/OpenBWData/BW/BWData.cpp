@@ -676,6 +676,31 @@ void GameOwner::setPrintTextCallback(std::function<void (const char*)> func)
   impl->impl.print_text_callback = func;
 }
 
+struct snapshot_impl {
+  bwgame::state st;
+  bwgame::optional<bwgame::action_state> action_st;
+  game_vars vars;
+};
+
+Snapshot::Snapshot()
+{
+}
+
+Snapshot::Snapshot(Snapshot&& n)
+{
+  impl = std::move(n.impl);
+}
+
+Snapshot::~Snapshot()
+{
+}
+
+Snapshot& Snapshot::operator=(Snapshot&& n)
+{
+  impl = std::move(n.impl);
+  return *this;
+}
+
 
 void Game::overrideEnvVar(std::string var, std::string value)
 {
@@ -1181,9 +1206,42 @@ void Game::killUnit(Unit u)
 void Game::removeUnit(Unit u)
 {
   if (u.u) {
-        impl->funcs.hide_unit(u.u);
-        impl->funcs.kill_unit(u.u);
+    impl->funcs.hide_unit(u.u);
+    impl->funcs.kill_unit(u.u);
   }
+}
+
+Snapshot Game::saveSnapshot()
+{
+  auto v = std::make_unique<snapshot_impl>();
+  v->st = bwgame::copy_state(impl->st);
+  if (impl->vars.is_replay) v->action_st = bwgame::copy_state(impl->sync_funcs.action_st, impl->st, v->st);
+  v->vars = impl->vars;
+  Snapshot r;
+  r.impl = std::move(v);
+  return r;
+}
+
+void Game::loadSnapshot(const Snapshot& snapshot)
+{
+  auto& v = snapshot.impl;
+  impl->vars = v->vars;
+  impl->st = bwgame::copy_state(v->st);
+  if (impl->vars.is_replay) impl->sync_funcs.action_st = bwgame::copy_state(*v->action_st, v->st, impl->st);
+
+  if (impl->sync_funcs.sync_st.save_replay) {
+    impl->sync_funcs.sync_st.save_replay = nullptr;
+  }
+}
+
+void Game::setRandomSeed(uint32_t value)
+{
+  impl->st.lcg_rand_state = value;
+}
+
+void Game::disableTriggers()
+{
+  impl->st.trigger_timer = -1;
 }
 
 
