@@ -483,7 +483,7 @@ namespace BWAPI
       if ( tournamentAI )
       {
         this->lastEventTime = 0;
-        startTime == std::chrono::high_resolution_clock::now();
+        startTime = std::chrono::high_resolution_clock::now();
       }
 
       // Send event to the AI Client module
