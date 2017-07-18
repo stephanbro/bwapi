@@ -380,7 +380,9 @@ void GameImpl::initializeAIModule()
     hAIModule         = nullptr;
 
     std::string dll;
-    std::string aicfg = LoadConfigString("ai", BUILD_DEBUG ? "ai_dbg" : "ai", "_NULL");
+    std::string aicfg;
+    if (!aicfgOverride.empty()) aicfg = aicfgOverride;
+    else aicfg = LoadConfigString("ai", BUILD_DEBUG ? "ai_dbg" : "ai", "_NULL");
     if (aicfg == "_NULL")
     {
       Broodwar << Text::Red << "Could not find " << (BUILD_DEBUG ? "ai_dbg" : "ai") << " in \"" << configPath() << "\"." << std::endl;

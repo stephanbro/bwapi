@@ -333,6 +333,7 @@ namespace BWAPI
       AIModule* tournamentAI = nullptr;
       
       AIModule* specifiedModule = nullptr;
+      std::string aicfgOverride;
 
       // NOTE: This MUST be a POD array (NOT std::array) because of the crappy assembly hacks that are being used
       // Until we can get rid of the assembly hacks, this must be treated like a pissed off cat

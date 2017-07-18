@@ -71,14 +71,27 @@ void ExampleAIModule::onFrame()
   if ( Broodwar->isReplay() || Broodwar->isPaused() || !Broodwar->self() )
     return;
 
+  for (auto &u : Broodwar->self()->getUnits())
+  {
+    Broodwar->drawBoxMap(u->getPosition().x, u->getPosition().y, u->getPosition().x + 16, u->getPosition().y + 32, BWAPI::Colors::Red);
+  }
+
+  Broodwar->drawCircleScreen(200, 200, 41, BWAPI::Colors::Yellow,  true);
+
   // Prevent spamming by only running our onFrame once every number of latency frames.
   // Latency frames are the number of frames before commands are processed.
   if ( Broodwar->getFrameCount() % Broodwar->getLatencyFrames() != 0 )
     return;
 
+  printf("screen pos is %d %d\n", Broodwar->getScreenPosition().x, Broodwar->getScreenPosition().y);
+  printf("screen size is %d %d\n", Broodwar->getScreenSize().x, Broodwar->getScreenSize().y);
+
+  printf("--\n");
   // Iterate through all the units that we own
   for (auto &u : Broodwar->self()->getUnits())
   {
+    printf("aa\n");
+    //Broodwar->drawBoxMap(u->getPosition().x, u->getPosition().y, u->getPosition().x + 32, u->getPosition().y + 32, BWAPI::Colors::Red);
     // Ignore the unit if it no longer exists
     // Make sure to include this block when handling any Unit pointer!
     if ( !u->exists() )

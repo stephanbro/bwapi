@@ -501,7 +501,7 @@ namespace BWAPI
           break;
       }
     }
-    return data->shapeCount;
+    return shapes.size();
   }
 #undef fixed2Int
 #undef int2Fixed
