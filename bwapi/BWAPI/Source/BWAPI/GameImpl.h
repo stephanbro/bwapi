@@ -3,6 +3,7 @@
 #include <list>
 #include <deque>
 #include <unordered_map>
+#include <vector>
 
 #include <Util/Types.h>
 #include <BW/Constants.h>
@@ -216,6 +217,7 @@ namespace BWAPI
       virtual void createMultiPlayerGame(std::function<void()> setupFunction) override;
       virtual void startGame() override;
       virtual void switchToPlayer(Player p) override;
+      virtual int connectedPlayerCount() override;
       virtual Unit createUnit(Player player, UnitType type, Position pos) override;
       virtual void killUnit(Unit u) override;
       virtual void removeUnit(Unit u) override;
@@ -225,6 +227,7 @@ namespace BWAPI
       virtual std::vector<std::string> listSnapshots() override;
       virtual void setRandomSeed(uint32_t value) override;
       virtual void disableTriggers() override;
+      virtual BWAPI::Position getScreenSize() const override;
 
       //Internal BWAPI commands:
       GameImpl(BW::Game bwgame);
@@ -301,6 +304,9 @@ namespace BWAPI
       // Count of game-frames passed from game start.
       int frameCount = 0;
       std::array<BW::CUnit*, BW::PLAYER_COUNT> savedUnitSelection;
+
+      std::vector<BWAPIC::Shape> shapes;
+      std::vector<std::string> shapeStrings;
 
       void setLocalSpeedDirect(int speed);
     public:

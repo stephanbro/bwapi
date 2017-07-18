@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BW/Position.h"
+#include "BW/Bitmap.h"
 #include "Util/Types.h"
 
 #include <cstdint>
@@ -174,6 +175,8 @@ struct Game {
   int MouseY() const;
   int ScreenX() const;
   int ScreenY() const;
+  int screenWidth() const;
+  int screenHeight() const;
   void setScreenPosition(int x, int y);
   int NetMode() const;
   bool isGamePaused() const;
@@ -186,6 +189,8 @@ struct Game {
   void setGUI(bool enabled);
   void enableCheats() const;
   void saveReplay(const std::string& filename);
+  Bitmap GameScreenBuffer();
+  void setOnDraw(std::function<void(uint8_t*, size_t)> onDraw);
   
   template<typename T, typename... args_T>
   void QueueCommand(args_T&&... args) {
@@ -249,6 +254,7 @@ struct Game {
   void createMultiPlayerGame(std::function<void()> setupFunction);
   void startGame();
   void switchToSlot(int n);
+  int connectedPlayerCount();
   
   UnitFinderIterator UnitOrderingX() const;
   UnitFinderIterator UnitOrderingY() const;

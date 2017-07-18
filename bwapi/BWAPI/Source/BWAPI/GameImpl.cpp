@@ -962,6 +962,10 @@ namespace BWAPI
       bwgame.switchToSlot(((PlayerImpl*)p)->getIndex());
     }
   }
+  int GameImpl::connectedPlayerCount()
+  {
+    return bwgame.connectedPlayerCount();
+  }
   Unit GameImpl::createUnit(Player player, UnitType type, Position pos)
   {
     UnitImpl* u = getUnitFromBWUnit(bwgame.createUnit(((PlayerImpl*)player)->getIndex(), type.getID(), pos.x, pos.y));
@@ -1106,6 +1110,11 @@ namespace BWAPI
   void GameImpl::disableTriggers()
   {
     bwgame.disableTriggers();
+  }
+
+  BWAPI::Position GameImpl::getScreenSize() const
+  {
+    return {bwgame.screenWidth(), bwgame.screenHeight()};
   }
 
 

@@ -51,6 +51,18 @@ void fatal_error_str(a_string str){
 namespace BW {
 
 #ifdef OPENBW_ENABLE_UI
+
+
+struct ui_functions: bwgame::ui_functions {
+  using bwgame::ui_functions::ui_functions;
+
+  std::function<void(uint8_t*, size_t)> on_draw;
+
+  virtual void draw_callback(uint8_t* data, size_t data_pitch) override {
+    if (on_draw) on_draw(data, data_pitch);
+  }
+};
+
 struct ui_wrapper {
   std::chrono::high_resolution_clock clock;
   std::chrono::high_resolution_clock::time_point last_update;
@@ -61,6 +73,12 @@ struct ui_wrapper {
   std::condition_variable cv;
   int game_speed = 0;
   bool window_closed = false;
+  uint8_t* m_screen_buffer = nullptr;
+  int screen_width = 0;
+  int screen_height = 0;
+  int screen_pos_x = 0;
+  int screen_pos_y = 0;
+  std::function<void(uint8_t*, size_t)> on_draw;
   bwgame::game_player get_player(bwgame::state& st) {
     bwgame::game_player player;
     player.set_st(st);
@@ -70,7 +88,7 @@ struct ui_wrapper {
 
     ui_thread = std::thread([this, player = get_player(st), mpq_path]() mutable {
       std::unique_lock<std::mutex> l(mut);
-      bwgame::ui_functions ui(std::move(player));
+      ui_functions ui(std::move(player));
 
       ui.exit_on_close = false;
       ui.global_volume = 0;
@@ -85,6 +103,16 @@ struct ui_wrapper {
 
       ui.resize(screen_width, screen_height);
       ui.screen_pos = {(int)ui.game_st.map_width / 2 - (int)screen_width / 2, (int)ui.game_st.map_height / 2 - (int)screen_height / 2};
+
+      ui.on_draw = [this, &ui](uint8_t* data, size_t data_pitch) {
+        this->m_screen_buffer = data;
+        //this->screen_width = ui.screen_width;
+        this->screen_width = data_pitch;
+        this->screen_height = ui.screen_height;
+        this->screen_pos_x = ui.screen_pos.x;
+        this->screen_pos_y = ui.screen_pos.y;
+        this->on_draw(data, data_pitch);
+      };
 
       while (!exit_thread) {
         cv.wait_for(l, std::chrono::milliseconds(42), [&]{
@@ -116,6 +144,25 @@ struct ui_wrapper {
   auto get_lock() {
     return std::unique_lock<std::mutex>(mut);
   }
+
+  void set_on_draw(std::function<void(uint8_t*, size_t)> f) {
+    on_draw = std::move(f);
+  }
+  int width() {
+    return screen_width;
+  }
+  int height() {
+    return screen_height;
+  }
+  int screen_x() {
+    return screen_pos_x;
+  }
+  int screen_y() {
+    return screen_pos_y;
+  }
+  uint8_t* screen_buffer() {
+    return m_screen_buffer;
+  }
 };
 #else
 struct ui_wrapper {
@@ -127,6 +174,23 @@ struct ui_wrapper {
   auto get_lock() {
     return 0;
   }
+  void set_on_draw(std::function<void(uint8_t*, size_t)> f) {
+  }
+  int width() {
+    return 0;
+  }
+  int height() {
+    return 0;
+  }
+  int screen_x() {
+    return 0;
+  }
+  int screen_y() {
+    return 0;
+  }
+  uint8_t* screen_buffer() {
+    return nullptr;
+  }
 };
 #endif
 
@@ -136,6 +200,7 @@ struct game_vars {
   
   bool left_game = false;
 
+  int game_type = 0;
   bool game_type_melee = false;
   
   std::array<int, 7> game_speeds_frame_times{{ 167, 111, 83, 67, 56, 48, 42 }};
@@ -218,12 +283,15 @@ struct game_setup_helper_t {
     server_n = 0;
 
     if (ext == "rep") {
-  
+
       replay_funcs.replay_st = bwgame::replay_state();
-      replay_funcs.load_replay_file(filename);
+      replay_funcs.load_replay_file(filename, true, &scenario_chk_data);
     
       vars.is_replay = true;
       vars.local_player_id = -1;
+
+      vars.game_type = replay_funcs.replay_st.game_type;
+      vars.game_type_melee = vars.game_type == 2;
   
     } else {
       
@@ -244,7 +312,8 @@ struct game_setup_helper_t {
       }
     
       load_funcs.load_map_data(scenario_chk_data.data(), scenario_chk_data.size(), [&]() {
-        
+
+        vars.game_type = vars.game_type_melee ? 2 : 10;
         sync_funcs.sync_st.game_type_melee = vars.game_type_melee;
         if (vars.game_type_melee) {
           load_funcs.setup_info.victory_condition = 1;
@@ -259,7 +328,7 @@ struct game_setup_helper_t {
           if (vars.local_player_id != -1) {
             for (auto& v : st.players) {
               if (v.controller == bwgame::player_t::controller_open || v.controller == bwgame::player_t::controller_computer) {
-                v.controller = bwgame::player_t::controller_computer;
+                  v.controller = bwgame::player_t::controller_computer;
               }
             }
           }
@@ -306,149 +375,155 @@ struct game_setup_helper_t {
     
     server_n = 0;
 
-    if (ext == "rep") {
-      
-      error("loading replays in multiplayer is not supported");
-      
-      replay_funcs.replay_st = bwgame::replay_state();
-      replay_funcs.load_replay_file(filename);
-    
-      vars.is_replay = true;
-      vars.local_player_id = -1;
-      
-    } else {
-      
-      auto name = sync_funcs.sync_st.local_client->name;
-      auto* save_replay = sync_funcs.sync_st.save_replay;
-      sync_funcs.action_st = bwgame::action_state();
-      sync_funcs.sync_st = bwgame::sync_state();
-      sync_funcs.sync_st.local_client->name = std::move(name);
-      sync_funcs.sync_st.save_replay = save_replay;
-      if (save_replay) *save_replay = bwgame::replay_saver_state();
-      sync_funcs.sync_st.latency = 3;
-      bwgame::game_load_functions load_funcs(st);
-      
+    bool is_replay = ext == "rep";
+
+    auto name = sync_funcs.sync_st.local_client->name;
+    auto* save_replay = sync_funcs.sync_st.save_replay;
+    if (is_replay) save_replay = nullptr;
+    sync_funcs.action_st = bwgame::action_state();
+    sync_funcs.sync_st = bwgame::sync_state();
+    sync_funcs.sync_st.local_client->name = std::move(name);
+    sync_funcs.sync_st.save_replay = save_replay;
+    if (save_replay) *save_replay = bwgame::replay_saver_state();
+    sync_funcs.sync_st.latency = 3;
+    bwgame::game_load_functions load_funcs(st);
+
+    if (!is_replay) {
       (bwgame::data_loading::mpq_file<>(filename))(scenario_chk_data, "staredit/scenario.chk");
-      
+
       if (save_replay) {
         save_replay->map_data = scenario_chk_data.data();
         save_replay->map_data_size = scenario_chk_data.size();
       }
-      
-      std::string default_lan_mode = "LOCAL_AUTO";
+    }
+
+    std::string default_lan_mode = "LOCAL_AUTO";
 #ifdef _WIN32
-      default_lan_mode = "TCP";
+    default_lan_mode = "TCP";
 #endif
-      std::string lan_mode = env("OPENBW_LAN_MODE", default_lan_mode);
-      for (auto& v : lan_mode) v &= ~0x20;
-      if (lan_mode == "TCP") server_n = 1;
-      else if (lan_mode == "LOCAL" || lan_mode=="LOCAL_FD" || lan_mode == "LOCAL_AUTO") server_n = 2;
-      else if (lan_mode == "FD" || lan_mode == "FILE") server_n = 3;
+    std::string lan_mode = env("OPENBW_LAN_MODE", default_lan_mode);
+    for (auto& v : lan_mode) v &= ~0x20;
+    if (lan_mode == "TCP") server_n = 1;
+    else if (lan_mode == "LOCAL" || lan_mode=="LOCAL_FD" || lan_mode == "LOCAL_AUTO") server_n = 2;
+    else if (lan_mode == "FD" || lan_mode == "FILE") server_n = 3;
 
-      std::string listen_hostname = env("OPENBW_TCP_LISTEN_HOSTNAME", "0.0.0.0");
-      int listen_port = std::atoi(env("OPENBW_TCP_LISTEN_PORT", "6112").c_str());
-      std::string connect_hostname = env("OPENBW_TCP_CONNECT_HOSTNAME", "127.0.0.1");
-      int connect_port = std::atoi(env("OPENBW_TCP_CONNECT_PORT", "6112").c_str());
+    std::string listen_hostname = env("OPENBW_TCP_LISTEN_HOSTNAME", "0.0.0.0");
+    int listen_port = std::atoi(env("OPENBW_TCP_LISTEN_PORT", "6112").c_str());
+    std::string connect_hostname = env("OPENBW_TCP_CONNECT_HOSTNAME", "127.0.0.1");
+    int connect_port = std::atoi(env("OPENBW_TCP_CONNECT_PORT", "6112").c_str());
 
-      load_funcs.load_map_data(scenario_chk_data.data(), scenario_chk_data.size(), [&]() {
-
-        if (server_n == 1) {
-          tcp_server.bind(listen_hostname.c_str(), listen_port);
-          tcp_server.connect(connect_hostname.c_str(), connect_port);
-        } else if (server_n == 2) {
+    auto func = [&]() {
+      if (server_n == 1) {
+            tcp_server.bind(listen_hostname.c_str(), listen_port);
+        tcp_server.connect(connect_hostname.c_str(), connect_port);
+      } else if (server_n == 2) {
 #ifndef _WIN32
-          if (lan_mode == "LOCAL_AUTO") {
+            if (lan_mode == "LOCAL_AUTO") {
             std::string directory = env("OPENBW_LOCAL_AUTO_DIRECTORY", "");
-            if (directory.empty()) directory = "/tmp/openbw";
-            while (!directory.empty() && *std::prev(directory.end()) == '/') directory.erase(std::prev(directory.end()));
-            mkdir(directory.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-            chmod(directory.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-            std::string path = directory + "/" + sync_funcs.sync_st.local_client->uid.str() + ".socket";
-            local_server.bind(path.c_str());
-            DIR* d = opendir(directory.c_str());
-            if (d) {
-              dirent* e;
-              std::string fn;
-              while ((e = readdir(d))) {
-                if (!strcmp(e->d_name, ".")) continue;
-                if (!strcmp(e->d_name, "..")) continue;
-                fn = directory + "/" + e->d_name;
-                struct stat s;
-                if (!stat(fn.c_str(), &s) && S_ISSOCK(s.st_mode)) {
+          if (directory.empty()) directory = "/tmp/openbw";
+          while (!directory.empty() && *std::prev(directory.end()) == '/') directory.erase(std::prev(directory.end()));
+          mkdir(directory.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+          chmod(directory.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+          std::string path = directory + "/" + sync_funcs.sync_st.local_client->uid.str() + ".socket";
+          local_server.bind(path.c_str());
+          DIR* d = opendir(directory.c_str());
+          if (d) {
+            dirent* e;
+            std::string fn;
+            while ((e = readdir(d))) {
+                  if (!strcmp(e->d_name, ".")) continue;
+              if (!strcmp(e->d_name, "..")) continue;
+              fn = directory + "/" + e->d_name;
+              struct stat s;
+              if (!stat(fn.c_str(), &s) && S_ISSOCK(s.st_mode)) {
                   if (!local_server.try_connect(fn)) {
-                    unlink(fn.c_str());
-                  }
+                  unlink(fn.c_str());
                 }
               }
-              closedir(d);
             }
-          } else if (lan_mode == "LOCAL_FD") {
+            closedir(d);
+          }
+        } else if (lan_mode == "LOCAL_FD") {
             std::string fd_str = env("OPENBW_LOCAL_FD", "");
-            if (fd_str.empty()) error("OPENBW_LAN_MODE is LOCAL_FD but OPENBW_LOCAL_FD not specified");
-            local_server.assign(std::atoi(fd_str.c_str()));
-          } else {
+          if (fd_str.empty()) error("OPENBW_LAN_MODE is LOCAL_FD but OPENBW_LOCAL_FD not specified");
+          local_server.assign(std::atoi(fd_str.c_str()));
+        } else {
             std::string path = env("OPENBW_LOCAL_PATH", "");
-            if (path.empty()) error("OPENBW_LAN_MODE is LOCAL but OPENBW_LOCAL_PATH not specified");
-            for (int i = 0;; ++i) {
-              if (local_server.try_bind(path.c_str())) break;
-              if (local_server.try_connect(path.c_str())) break;
-              if (i == 10) {
-                local_server.connect(path.c_str());
-                break;
-              }
+          if (path.empty()) error("OPENBW_LAN_MODE is LOCAL but OPENBW_LOCAL_PATH not specified");
+          for (int i = 0;; ++i) {
+            if (local_server.try_bind(path.c_str())) break;
+            if (local_server.try_connect(path.c_str())) break;
+            if (i == 10) {
+                  local_server.connect(path.c_str());
+              break;
             }
           }
+        }
 #else
-          error("OPENBW_LAN_MODE %s not supported on Windows", lan_mode);
+            error("OPENBW_LAN_MODE %s not supported on Windows", lan_mode);
 #endif
-        } else if (server_n == 3) {
+      } else if (server_n == 3) {
 #ifndef _WIN32
-          int fd_read = -1;
-          int fd_write = -1;
-          if (lan_mode == "FD") {
+            int fd_read = -1;
+        int fd_write = -1;
+        if (lan_mode == "FD") {
             std::string fd_read_str = env("OPENBW_FD_READ", "");
-            std::string fd_write_str = env("OPENBW_FD_WRITE", "");
-            if (fd_read_str.empty()) error("OPENBW_LAN_MODE is FD but OPENBW_FD_READ not specified");
-            if (fd_write_str.empty()) error("OPENBW_LAN_MODE is FD but OPENBW_FD_WRITE not specified");
-            fd_read = std::atoi(fd_read_str.c_str());
-            fd_write = std::atoi(fd_write_str.c_str());
-          } else {
+          std::string fd_write_str = env("OPENBW_FD_WRITE", "");
+          if (fd_read_str.empty()) error("OPENBW_LAN_MODE is FD but OPENBW_FD_READ not specified");
+          if (fd_write_str.empty()) error("OPENBW_LAN_MODE is FD but OPENBW_FD_WRITE not specified");
+          fd_read = std::atoi(fd_read_str.c_str());
+          fd_write = std::atoi(fd_write_str.c_str());
+        } else {
             std::string file_read = env("OPENBW_FILE_READ", "");
-            std::string file_write = env("OPENBW_FILE_WRITE", "");
-            if (file_read.empty()) error("OPENBW_LAN_MODE is FILE but OPENBW_FILE_READ not specified");
-            if (file_write.empty()) error("OPENBW_LAN_MODE is FILE but OPENBW_FILE_WRITE not specified");
-            fd_read = open(file_read.c_str(), O_RDWR);
-            if (fd_read == -1) error("open %s failed: %s", file_read.c_str(), std::strerror(errno));
-            fd_write = open(file_write.c_str(), O_WRONLY);
-            if (fd_write == -1) error("open %s failed: %s", file_write.c_str(), std::strerror(errno));
-          }
-          file_server.open(fd_read, fd_write);
+          std::string file_write = env("OPENBW_FILE_WRITE", "");
+          if (file_read.empty()) error("OPENBW_LAN_MODE is FILE but OPENBW_FILE_READ not specified");
+          if (file_write.empty()) error("OPENBW_LAN_MODE is FILE but OPENBW_FILE_WRITE not specified");
+          fd_read = open(file_read.c_str(), O_RDWR);
+          if (fd_read == -1) error("open %s failed: %s", file_read.c_str(), std::strerror(errno));
+          fd_write = open(file_write.c_str(), O_WRONLY);
+          if (fd_write == -1) error("open %s failed: %s", file_write.c_str(), std::strerror(errno));
+        }
+        file_server.open(fd_read, fd_write);
 #else
-          error("OPENBW_LAN_MODE %s not supported on Windows", lan_mode);
+            error("OPENBW_LAN_MODE %s not supported on Windows", lan_mode);
 #endif
-        }
-        
-        sync_funcs.sync_st.game_type_melee = vars.game_type_melee;
-        if (vars.game_type_melee) {
-          load_funcs.setup_info.victory_condition = 1;
-          load_funcs.setup_info.starting_units = 2;
-          load_funcs.setup_info.resource_type = 1;
-        }
-        sync_funcs.sync_st.setup_info = &load_funcs.setup_info;
+      }
 
-        while (!sync_funcs.sync_st.game_started) {
-          if (server_n == 0) sync_funcs.sync(noop_server);
-          else if (server_n == 1) sync_funcs.sync(tcp_server);
-          else if (server_n == 2) sync_funcs.sync(local_server);
-          else if (server_n == 3) sync_funcs.sync(file_server);
-          vars.local_player_id = sync_funcs.sync_st.local_client->player_slot;
-          setup_function();
-        }
-        
-        sync_funcs.sync_st.setup_info = nullptr;
-      });
-    
+      vars.game_type = vars.game_type_melee ? 2 : 10;
+      sync_funcs.sync_st.game_type_melee = vars.game_type_melee;
+      if (vars.game_type_melee) {
+        load_funcs.setup_info.victory_condition = 1;
+        load_funcs.setup_info.starting_units = 2;
+        load_funcs.setup_info.resource_type = 1;
+      }
+      sync_funcs.sync_st.setup_info = &load_funcs.setup_info;
+
+      while (!sync_funcs.sync_st.game_started) {
+        sync();
+        setup_function();
+      }
+
+      sync_funcs.sync_st.setup_info = nullptr;
+    };
+
+    if (is_replay) {
+
+      replay_funcs.replay_st = bwgame::replay_state();
+      replay_funcs.load_replay_file(filename, true, &scenario_chk_data);
+
+      vars.is_replay = true;
+      vars.local_player_id = -1;
+
+      vars.game_type = replay_funcs.replay_st.game_type;
+      vars.game_type_melee = vars.game_type == 2;
+
+      func();
+
+    } else {
       vars.is_replay = false;
+      load_funcs.load_map_data(scenario_chk_data.data(), scenario_chk_data.size(), [&]() {
+        func();
+      });
     }
   
     vars.map_filename = filename;
@@ -460,6 +535,14 @@ struct game_setup_helper_t {
     vars.left_game = true;
     sync_funcs.leave_game(server);
     
+  }
+
+  void sync() {
+    if (server_n == 0) sync_funcs.sync(noop_server);
+    else if (server_n == 1) sync_funcs.sync(tcp_server);
+    else if (server_n == 2) sync_funcs.sync(local_server);
+    else if (server_n == 3) sync_funcs.sync(file_server);
+    vars.local_player_id = sync_funcs.sync_st.local_client->player_slot;
   }
   
   void start_game() {
@@ -477,10 +560,11 @@ struct game_setup_helper_t {
   }
   void set_name(const std::string& name) {
     if (sync_funcs.sync_st.local_client->name == name) return;
-    if (server_n == 0) sync_funcs.set_local_client_name(noop_server, name.c_str());
-    else if (server_n == 1) sync_funcs.set_local_client_name(tcp_server, name.c_str());
-    else if (server_n == 2) sync_funcs.set_local_client_name(local_server, name.c_str());
-    else if (server_n == 3) sync_funcs.set_local_client_name(file_server, name.c_str());
+    sync_funcs.set_local_client_name(name.c_str());
+  }
+
+  int connected_player_count() {
+    return sync_funcs.connected_player_count();
   }
   
   void set_race(int race) {
@@ -536,6 +620,8 @@ struct openbwapi_impl {
   using clock_t = std::chrono::high_resolution_clock;
   clock_t clock;
   clock_t::time_point last_frame;
+  std::function<void (uint8_t *, size_t)> on_draw;
+  bool on_draw_changed = false;
   
   openbwapi_impl(game_vars& vars, bwgame::state& st, bwgame::action_state& action_st, bwgame::replay_state& replay_st, bwgame::sync_state& sync_st) : vars(vars), st(st), funcs(vars, st), replay_funcs(vars, st, action_st, replay_st), sync_funcs(vars, st, action_st, sync_st) {}
   
@@ -557,27 +643,37 @@ struct openbwapi_impl {
   }
 
   void next_frame() {
+    if (!ui && ui_enabled) {
+      ui = std::make_unique<ui_wrapper>(st, game_setup_helper.env("OPENBW_MPQ_PATH", "."));
+    }
     if (ui) {
       auto l = ui->get_lock();
-      if (vars.is_replay) replay_funcs.next_frame();
-      else {
+      if (vars.is_replay) {
+        replay_funcs.next_frame();
+        if (vars.is_multi_player) game_setup_helper.sync();
+      } else {
         game_setup_helper.next_frame();
       }
     } else {
-      if (vars.is_replay) replay_funcs.next_frame();
-      else {
+      if (vars.is_replay) {
+        replay_funcs.next_frame();
+        if (vars.is_multi_player) game_setup_helper.sync();
+      } else {
         game_setup_helper.next_frame();
       }
     }
 
     if (ui) {
+      if (on_draw_changed && on_draw) {
+        on_draw_changed = false;
+        ui->set_on_draw([this](uint8_t* data, size_t data_pitch) {
+          this->on_draw(data, data_pitch);
+        });
+      }
       ui->update();
       if (ui->closed()) {
         game_setup_helper.leave_game();
       }
-    } else if (ui_enabled) {
-      ui = std::make_unique<ui_wrapper>(st, game_setup_helper.env("OPENBW_MPQ_PATH", "."));
-      ui->update();
     }
 
     auto now = clock.now();
@@ -718,7 +814,7 @@ Player Game::getPlayer(int n) const
 
 int Game::gameType() const
 {
-  return impl->vars.game_type_melee ? 2 : 10;
+  return impl->vars.game_type;
 }
 
 int Game::Latency() const
@@ -728,7 +824,7 @@ int Game::Latency() const
 
 int Game::ReplayHead_frameCount() const
 {
-  return 0;
+  return impl->vars.is_replay ? impl->replay_funcs.replay_st.end_frame : 0;
 }
 
 int Game::MouseX() const
@@ -743,11 +839,25 @@ int Game::MouseY() const
 
 int Game::ScreenX() const
 {
+  if (impl->ui) return impl->ui->screen_x();
   return 0;
 }
 
 int Game::ScreenY() const
 {
+  if (impl->ui) return impl->ui->screen_y();
+  return 0;
+}
+
+int Game::screenWidth() const
+{
+  if (impl->ui) return impl->ui->width();
+  return 0;
+}
+
+int Game::screenHeight() const
+{
+  if (impl->ui) return impl->ui->height();
   return 0;
 }
 
@@ -1062,6 +1172,11 @@ void Game::switchToSlot(int n)
   impl->game_setup_helper.switch_to_slot(n);
 }
 
+int Game::connectedPlayerCount()
+{
+  return impl->game_setup_helper.connected_player_count();
+}
+
 UnitFinderIterator Game::UnitOrderingX() const
 {
   return {impl->funcs.st.unit_finder_x.data()};
@@ -1175,6 +1290,18 @@ void Game::saveReplay(const std::string& filename)
     bwgame::data_loading::file_writer<> w(filename.c_str());
     replay_saver_funcs.save_replay(impl->st.current_frame, w);
   }
+}
+
+Bitmap Game::GameScreenBuffer()
+{
+  if (impl->ui) return {impl->ui->width(), impl->ui->height(), impl->ui->screen_buffer()};
+  return {0, 0, nullptr};
+}
+
+void Game::setOnDraw(std::function<void (uint8_t*, size_t)> onDraw)
+{
+  impl->on_draw = onDraw;
+  impl->on_draw_changed = true;
 }
 
 size_t Game::regionCount() const

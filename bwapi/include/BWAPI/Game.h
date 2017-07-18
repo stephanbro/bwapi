@@ -2,6 +2,7 @@
 #include <list>
 #include <string>
 #include <cstdarg>
+#include <vector>
 
 #include <BWAPI/Interface.h>
 #include <BWAPI/UnitType.h>
@@ -1736,6 +1737,7 @@ namespace BWAPI
     virtual void createMultiPlayerGame(std::function<void()> setupFunction) = 0;
     virtual void startGame() = 0;
     virtual void switchToPlayer(Player p) = 0;
+    virtual int connectedPlayerCount() = 0;
     virtual Unit createUnit(Player player, UnitType type, Position pos) = 0;
     virtual void killUnit(Unit u) = 0;
     virtual void removeUnit(Unit u) = 0;
@@ -1745,6 +1747,7 @@ namespace BWAPI
     virtual std::vector<std::string> listSnapshots() = 0;
     virtual void setRandomSeed(uint32_t value) = 0;
     virtual void disableTriggers() = 0;
+    virtual BWAPI::Position getScreenSize() const = 0;
 
   };
 

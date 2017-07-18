@@ -163,6 +163,15 @@ void GameImpl::update()
   //if the AI is a DLL, this will translate the events into AIModule callbacks.
   server.update();
 
+  shapes.resize(server.data->shapeCount);
+  for (size_t i = 0; i != shapes.size(); ++i) {
+    shapes[i] = server.data->shapes[i];
+  }
+  shapeStrings.resize(server.data->stringCount);
+  for (size_t i = 0; i != shapeStrings.size(); ++i) {
+    shapeStrings[i] = server.data->strings[i];
+  }
+
   // Process events that were created for interface objects
   this->processInterfaceEvents();
 

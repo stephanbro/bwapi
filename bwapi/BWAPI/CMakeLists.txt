@@ -11,6 +11,7 @@ add_library(BWAPIObj OBJECT
   Source/Config.cpp
   Source/WMode.cpp
   Source/GameUpdate.cpp
+  Source/Graphics.cpp
   Source/BW/OrderTypes.cpp
   Source/BW/UnitTarget.cpp
   Source/BW/PositionUnitTarget.cpp
@@ -34,6 +35,7 @@ add_library(BWAPIObj OBJECT
   Source/BWAPI/ForceImpl.cpp
   Source/BW/CheatType.cpp
   Source/BWAPI/BWtoBWAPI.cpp
+  Source/BW/Bitmap.cpp
   ../Shared/GameShared.cpp
   ../Shared/PlayerShared.cpp
   ../Shared/UnitShared.cpp

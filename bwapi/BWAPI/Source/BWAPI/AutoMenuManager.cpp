@@ -236,70 +236,83 @@ void AutoMenuManager::startGame()
   
   if (isAutoSingle) {
     Broodwar->createSinglePlayerGame([&]() {
-      auto race = GameImpl::getMenuRace(this->autoMenuRace);
-      if (Broodwar->self()) 
+      if (Broodwar->isReplay())
       {
-        if (Broodwar->self()->getRace() != race)
-          Broodwar->self()->setRace(race);
-        unsigned enemyCount = 0;
-        for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
-        {
-          Player p = Broodwar->getPlayer(i);
-          if (p->getType() != PlayerTypes::EitherPreferHuman && p->getType() != PlayerTypes::EitherPreferComputer) continue;
-          if (p == Broodwar->self()) continue;
-          if (enemyCount < this->autoMenuEnemyCount)
-            p->setRace(GameImpl::getMenuRace(this->autoMenuEnemyRace[enemyCount++]));
-          else
-            p->closeSlot();
-        }
         Broodwar->startGame();
       }
       else
       {
-        bool foundSlot = false;
-        for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
+        auto race = GameImpl::getMenuRace(this->autoMenuRace);
+        if (Broodwar->self())
         {
-          Player p = Broodwar->getPlayer(i);
-          if (p->getType() == PlayerTypes::EitherPreferHuman)
+          if (Broodwar->self()->getRace() != race)
+            Broodwar->self()->setRace(race);
+          unsigned enemyCount = 0;
+          for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
           {
-            Broodwar->switchToPlayer(p);
-            foundSlot = true;
-            break;
+            Player p = Broodwar->getPlayer(i);
+            if (p->getType() != PlayerTypes::EitherPreferHuman && p->getType() != PlayerTypes::EitherPreferComputer) continue;
+            if (p == Broodwar->self()) continue;
+            if (enemyCount < this->autoMenuEnemyCount)
+              p->setRace(GameImpl::getMenuRace(this->autoMenuEnemyRace[enemyCount++]));
+            else
+              p->closeSlot();
           }
+          Broodwar->startGame();
         }
-        if (!foundSlot) throw std::runtime_error("createSinglePlayerGame: no available slot");
+        else
+        {
+          bool foundSlot = false;
+          for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
+          {
+            Player p = Broodwar->getPlayer(i);
+            if (p->getType() == PlayerTypes::EitherPreferHuman)
+            {
+              Broodwar->switchToPlayer(p);
+              foundSlot = true;
+              break;
+            }
+          }
+          if (!foundSlot) throw std::runtime_error("createSinglePlayerGame: no available slot");
+        }
       }
     });
 
   } else {
     
     Broodwar->createMultiPlayerGame([&]() {
-      auto race = GameImpl::getMenuRace(this->autoMenuRace);
-      if (Broodwar->self()) 
+      if (Broodwar->isReplay())
       {
-        if (Broodwar->self()->getRace() != race)
-          Broodwar->self()->setRace(race);
+        if (Broodwar->connectedPlayerCount() >= 2) Broodwar->startGame();
       }
-      else {
+      else
+      {
+        auto race = GameImpl::getMenuRace(this->autoMenuRace);
+        if (Broodwar->self())
+        {
+          if (Broodwar->self()->getRace() != race)
+            Broodwar->self()->setRace(race);
+        }
+        else {
+          for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
+          {
+            Player p = Broodwar->getPlayer(i);
+            if (p->getType() == PlayerTypes::EitherPreferHuman)
+            {
+              Broodwar->switchToPlayer(p);
+              break;
+            }
+          }
+        }
+        int playerCount = 0;
         for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
         {
           Player p = Broodwar->getPlayer(i);
-          if (p->getType() == PlayerTypes::EitherPreferHuman)
-          {
-            Broodwar->switchToPlayer(p);
-            break;
-          }
+          if (p->getType() != PlayerTypes::Player && p->getType() != PlayerTypes::Computer) continue;
+          ++playerCount;
         }
+        if (playerCount >= 2) Broodwar->startGame();
       }
-      
-      int playerCount = 0;
-      for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
-      {
-        Player p = Broodwar->getPlayer(i);
-        if (p->getType() != PlayerTypes::Player && p->getType() != PlayerTypes::Computer) continue;
-        ++playerCount;
-      }
-      if (playerCount >= 2) Broodwar->startGame();
     });
 
   }

@@ -94,6 +94,10 @@ namespace BWAPI
     for (u16 i = 0; i < BW::BULLET_ARRAY_MAX_LENGTH; ++i)
       bulletArray[i] = new BulletImpl(bwgame.getBullet((size_t)i));
 
+    bwgame.setOnDraw([this](uint8_t*, size_t) {
+      drawShapes();
+    });
+
     this->initializeData();
   }
   //----------------------------------------------- DESTRUCTOR -----------------------------------------------
