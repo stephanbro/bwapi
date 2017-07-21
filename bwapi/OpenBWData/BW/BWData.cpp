@@ -1292,7 +1292,7 @@ void Game::saveReplay(const std::string& filename)
   }
 }
 
-Bitmap Game::GameScreenBuffer()
+std::tuple<int, int, void*> Game::GameScreenBuffer()
 {
   if (impl->ui) return {impl->ui->width(), impl->ui->height(), impl->ui->screen_buffer()};
   return {0, 0, nullptr};

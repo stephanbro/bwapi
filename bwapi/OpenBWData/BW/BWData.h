@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BW/Position.h"
-#include "BW/Bitmap.h"
 #include "Util/Types.h"
 
 #include <cstdint>
@@ -189,7 +188,7 @@ struct Game {
   void setGUI(bool enabled);
   void enableCheats() const;
   void saveReplay(const std::string& filename);
-  Bitmap GameScreenBuffer();
+  std::tuple<int, int, void*> GameScreenBuffer();
   void setOnDraw(std::function<void(uint8_t*, size_t)> onDraw);
   
   template<typename T, typename... args_T>

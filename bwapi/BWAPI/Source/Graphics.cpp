@@ -1,13 +1,19 @@
 #include "Graphics.h"
 #include "GameImpl.h"
 #include "BW/BWData.h"
+#include "BW/Bitmap.h"
 
 #include <BWAPI/CoordinateType.h>
 #include <BWAPI/Color.h>
 
+static BW::Bitmap GameScreenBuffer() {
+  auto t = BWAPI::BroodwarImpl.bwgame.GameScreenBuffer();
+  return {std::get<0>(t), std::get<1>(t), std::get<2>(t)};
+}
+
 static inline void bwPlot(const int &x, const int &y, const int &color)
 {
-  BWAPI::BroodwarImpl.bwgame.GameScreenBuffer().plot(x, y, static_cast<u8>(color));
+  GameScreenBuffer().plot(x, y, static_cast<u8>(color));
 }
 
 static inline void convertCoordType(int &x, int &y, const BWAPI::CoordinateType::Enum &ctype)
@@ -29,8 +35,9 @@ void bwDrawBox(int x, int y, int w, int h, int color, BWAPI::CoordinateType::Enu
 {
   convertCoordType(x, y, ctype);
 
+  auto bm = GameScreenBuffer();
   for ( int i = y; i < y+h; ++i )
-    BWAPI::BroodwarImpl.bwgame.GameScreenBuffer().drawLine(x, i, x+w, i, static_cast<u8>(color));
+    bm.drawLine(x, i, x+w, i, static_cast<u8>(color));
 }
 
 void bwDrawDot(int x, int y, int color, BWAPI::CoordinateType::Enum ctype)
@@ -48,11 +55,11 @@ void bwDrawLine(int x1, int y1, int x2, int y2, int color, BWAPI::CoordinateType
   convertCoordType(x1,y1,ctype);
   convertCoordType(x2,y2,ctype);
 
-  BWAPI::BroodwarImpl.bwgame.GameScreenBuffer().drawLine(x1, y1, x2, y2, static_cast<u8>(color));
+  GameScreenBuffer().drawLine(x1, y1, x2, y2, static_cast<u8>(color));
 }
 
 void bwDrawText(int x, int y, const char* ptext, BWAPI::CoordinateType::Enum ctype, char size)
 {
   convertCoordType(x, y, ctype);
-  BWAPI::BroodwarImpl.bwgame.GameScreenBuffer().blitString(ptext, x, y, size);
+  GameScreenBuffer().blitString(ptext, x, y, size);
 }
