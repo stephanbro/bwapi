@@ -27,12 +27,13 @@ int main() {
       while (!h->bwgame.gameOver()) {
         h->update();
         h->bwgame.nextFrame();
-        
+
         if (!h->externalModuleConnected) {
           printf("No module loaded, exiting\n");
           return 1;
         }
       }
+      h->update();
       h->onGameEnd();
       h->bwgame.leaveGame();
     } while (!h->bwgame.gameClosed() && h->autoMenuManager.autoMenuRestartGame != "" && h->autoMenuManager.autoMenuRestartGame != "OFF");
