@@ -1294,8 +1294,8 @@ void Game::saveReplay(const std::string& filename)
 
 std::tuple<int, int, void*> Game::GameScreenBuffer()
 {
-  if (impl->ui) return {impl->ui->width(), impl->ui->height(), impl->ui->screen_buffer()};
-  return {0, 0, nullptr};
+  if (impl->ui) return std::make_tuple(impl->ui->width(), impl->ui->height(), impl->ui->screen_buffer());
+  return std::make_tuple(0, 0, nullptr);
 }
 
 void Game::setOnDraw(std::function<void (uint8_t*, size_t)> onDraw)
