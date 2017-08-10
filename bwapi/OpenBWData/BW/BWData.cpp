@@ -622,8 +622,16 @@ struct openbwapi_impl {
   clock_t::time_point last_frame;
   std::function<void (uint8_t *, size_t)> on_draw;
   bool on_draw_changed = false;
+  bool speed_override = false;
+  int speed_override_value = 0;
   
-  openbwapi_impl(game_vars& vars, bwgame::state& st, bwgame::action_state& action_st, bwgame::replay_state& replay_st, bwgame::sync_state& sync_st) : vars(vars), st(st), funcs(vars, st), replay_funcs(vars, st, action_st, replay_st), sync_funcs(vars, st, action_st, sync_st) {}
+  openbwapi_impl(game_vars& vars, bwgame::state& st, bwgame::action_state& action_st, bwgame::replay_state& replay_st, bwgame::sync_state& sync_st) : vars(vars), st(st), funcs(vars, st), replay_funcs(vars, st, action_st, replay_st), sync_funcs(vars, st, action_st, sync_st) {
+    auto speed = game_setup_helper.env("OPENBW_GAME_SPEED", "");
+    if (!speed.empty()) {
+      speed_override = true;
+      speed_override_value = std::atoi(speed.c_str());
+    }
+  }
   
   bool ui_enabled = false;
   
@@ -674,10 +682,10 @@ struct openbwapi_impl {
       if (ui->closed()) {
         game_setup_helper.leave_game();
       }
-    }
-
-    auto now = clock.now();
-    auto speed = std::chrono::milliseconds(vars.game_speeds_frame_times.back());
+  
+  auto now = clock.now();
+  auto speed = std::chrono::milliseconds(speed_override ? speed_override_value : vars.game_speeds_frame_times.back());
+  if (speed > std::chrono::milliseconds(0)) {
     last_frame += speed;
     auto frame_t = now - last_frame;
     if (frame_t > speed * 8) {
@@ -686,6 +694,8 @@ struct openbwapi_impl {
     }
     if (frame_t < speed) {
       std::this_thread::sleep_for(speed - frame_t);
+    }
+  }
     }
   }
 };
@@ -746,8 +756,8 @@ struct GameOwner_impl {
   bwgame::state& st;
   bwgame::action_state& action_st;
   const bwgame::game_state& game_st;
-  openbwapi_impl impl;
   game_vars vars;
+  openbwapi_impl impl;
   
   GameOwner_impl() : st(fst.st), action_st(fst.action_st), game_st(fst.game_st), impl(vars, fst.st, fst.action_st, fst.replay_st, fst.sync_st) {}
   
