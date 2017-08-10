@@ -57,6 +57,7 @@ namespace BWAPI
   }
   void Server::update()
   {
+    ++BroodwarImpl.serverUpdateCount;
     // Reset data coming in to server
     data->stringCount      = 0;
     data->commandCount     = 0;

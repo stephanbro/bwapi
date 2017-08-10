@@ -8,6 +8,10 @@
 
 #include "BW/BWData.h"
 
+#ifdef COMPAT
+#include "CompatGameImpl.h"
+#endif
+
 namespace BWAPI
 {
   // forwards
@@ -48,6 +52,10 @@ namespace BWAPI
       //static BulletImpl* BWBulletToBWAPIBullet(BW::CBullet* bullet);
       //static int nextId;
       BW::Bullet bwbullet;
+	
+#ifdef COMPAT
+      CompatBulletImpl compatBulletImpl{this};
+#endif
     private:
       int id = -1;
       bool __exists = false;

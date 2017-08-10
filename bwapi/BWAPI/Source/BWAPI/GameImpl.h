@@ -22,6 +22,10 @@
 #include "FPSCounter.h"
 #include "AutoMenuManager.h"
 
+#ifdef COMPAT
+#include "CompatGameImpl.h"
+#endif
+
 namespace bwgame {
   struct unit_t;
   struct bullet_t;
@@ -421,6 +425,11 @@ namespace BWAPI
     public:
       APMCounter apmCounter;
       CommandOptimizer commandOptimizer;
+
+      int serverUpdateCount = 0;
+#ifdef COMPAT
+      CompatGameImpl compatGameImpl{this};
+#endif
 
     private:
       bool tournamentCheck(Tournament::ActionID type, void *parameter = nullptr);

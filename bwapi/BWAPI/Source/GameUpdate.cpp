@@ -381,6 +381,9 @@ void GameImpl::initializeAIModule()
 
     std::string dll;
     std::string aicfg;
+#ifdef COMPAT
+    std::string compatDll;
+#endif
     if (!aicfgOverride.empty()) aicfg = aicfgOverride;
     else aicfg = LoadConfigString("ai", BUILD_DEBUG ? "ai_dbg" : "ai", "_NULL");
     if (aicfg == "_NULL")
@@ -401,6 +404,14 @@ void GameImpl::initializeAIModule()
       // trim whitespace outside quotations and then the quotations
       Util::trim(dll, Util::is_whitespace_or_newline);
       Util::trim(dll, [](char c) { return c == '"'; });
+
+#ifdef COMPAT
+      auto colon = dll.find(':');
+      if (colon != std::string::npos) {
+        compatDll = dll.substr(colon + 1);
+        dll = dll.substr(0, colon);
+      }
+#endif
 
 #ifdef _WIN32
       hAIModule = LoadLibraryA(dll.c_str());
@@ -428,17 +439,41 @@ void GameImpl::initializeAIModule()
     {
       // Obtain the AI module function
 #ifdef _WIN32
-      PFNGameInit newGame     = (PFNGameInit)GetProcAddress((HMODULE)hAIModule, "gameInit");
-      PFNCreateA1 newAIModule = (PFNCreateA1)GetProcAddress((HMODULE)hAIModule, "newAIModule");
+      auto import = [](void* module, const char* name) {
+        return GetProcAddress((HMODULE)module, name);
+      };
 #else
-      PFNGameInit newGame     = (PFNGameInit)dlsym(hAIModule, "gameInit");
-      PFNCreateA1 newAIModule = (PFNCreateA1)dlsym(hAIModule, "newAIModule");
+      auto import = [](void* module, const char* name) {
+        return dlsym(module, name);
+      };
 #endif
+      PFNGameInit newGame     = (PFNGameInit)import(hAIModule, "gameInit");
+      PFNCreateA1 newAIModule = (PFNCreateA1)import(hAIModule, "newAIModule");
       if ( newAIModule && newGame )
       {
         // Call the AI module function and assign the client variable
+#ifdef COMPAT
+        if (!compatDll.empty()) {
+          auto loadDll = (void(*)(const char*))import(hAIModule, "loadDll");
+          loadDll(compatDll.c_str());
+        }
+        newGame((Game*)&compatGameImpl);
+        this->client = compatGameImpl.wrapAIModule(newAIModule());
+#ifdef _WIN32
+        compatGameImpl.LoadLibrary = [](const char* name) {
+          return LoadLibraryA(name);
+        });
+        compatGameImpl.GetProcAddress = [&](void* module, const char* name) {
+          return GetProcAddress(module, name);
+        });
+#else
+      compatGameImpl.LoadLibrary = (void*(*)(const char*))dlsym(hAIModule, "LoadLibrary");
+      compatGameImpl.GetProcAddress = (void*(*)(void*, const char*))dlsym(hAIModule, "GetProcAddress");
+#endif
+#else
         newGame(this);
         this->client = newAIModule();
+#endif
         this->deleteClient = true;
 
         // Hide success strings in tournament mode

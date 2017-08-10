@@ -11,6 +11,10 @@
 
 #include "BW/BWData.h"
 
+#ifdef COMPAT
+#include "CompatGameImpl.h"
+#endif
+
 namespace BWAPI
 {
   // Forwards
@@ -122,6 +126,11 @@ namespace BWAPI
       s32 _refundedGas;
 
       bool wasSeenByBWAPIPlayer = false;
+	
+#ifdef COMPAT
+      CompatPlayerImpl compatPlayerImpl{this};
+#endif
+	
     private :
       int id = -1;
       u8 index;  /**< Order of the player, is used to load player's information from the memory */

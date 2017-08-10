@@ -9,6 +9,10 @@
 
 #include "BW/BWData.h"
 
+#ifdef COMPAT
+#include "CompatGameImpl.h"
+#endif
+
 namespace BWAPI
 {
   // Forwards
@@ -316,6 +320,10 @@ namespace BWAPI
       void clear();
       
       BW::Unit bwunit;
+
+#ifdef COMPAT
+      CompatUnitImpl compatUnitImpl{this};
+#endif
       
     private:
       /** Orders to select this unit (previous selection will be lost. */
