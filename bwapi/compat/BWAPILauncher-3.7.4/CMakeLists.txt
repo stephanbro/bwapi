@@ -11,19 +11,19 @@ include_directories(
 )
 
 add_definitions(-DCOMPAT)
-add_definitions(-DCOMPAT_4_1_2)
+add_definitions(-DCOMPAT_3_7_4)
 
-add_executable(BWAPILauncher-4.1.2
+add_executable(BWAPILauncher-3.7.4
   ../../BWAPILauncher/Source/Main.cpp
 )
 
-target_link_libraries(BWAPILauncher-4.1.2 BWAPI-4.1.2)
+target_link_libraries(BWAPILauncher-3.7.4 BWAPI-3.7.4)
 
 if (NOT WIN32)
-  target_link_libraries(BWAPILauncher-4.1.2 dl)
+  target_link_libraries(BWAPILauncher-3.7.4 dl)
 endif()
 
-install(TARGETS BWAPILauncher-4.1.2
+install(TARGETS BWAPILauncher-3.7.4
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

@@ -9,9 +9,9 @@ include_directories(
 )
 
 add_definitions(-DCOMPAT)
-add_definitions(-DCOMPAT_4_1_2)
+add_definitions(-DCOMPAT_3_7_4)
 
-add_library(BWAPIObj-4.1.2 OBJECT
+add_library(BWAPIObj-3.7.4 OBJECT
   ../CompatGameImpl.cpp
   ../../BWAPI/Source/Config.cpp
   ../../BWAPI/Source/WMode.cpp
@@ -50,18 +50,18 @@ add_library(BWAPIObj-4.1.2 OBJECT
   ../../Util/Source/Util/Sha1.cpp
 )
 
-set_property(TARGET BWAPIObj-4.1.2 PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET BWAPIObj-3.7.4 PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(BWAPI-4.1.2 SHARED
-  $<TARGET_OBJECTS:BWAPIObj-4.1.2>
+add_library(BWAPI-3.7.4 SHARED
+  $<TARGET_OBJECTS:BWAPIObj-3.7.4>
   $<TARGET_OBJECTS:BWAPICore>
 )
 
-target_link_libraries(BWAPI-4.1.2 BWAPILIB BWData)
+target_link_libraries(BWAPI-3.7.4 BWAPILIB BWData)
 
-set_property(TARGET BWAPI-4.1.2 PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set_property(TARGET BWAPI-3.7.4 PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-install(TARGETS BWAPI-4.1.2
+install(TARGETS BWAPI-3.7.4
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

@@ -5,7 +5,7 @@ include_directories(include)
 
 if (BUILD_COMPAT)
 	if (NOT MSVC)
-		list(APPEND CMAKE_CXX_FLAGS -m32)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
 	endif()
 endif()
 

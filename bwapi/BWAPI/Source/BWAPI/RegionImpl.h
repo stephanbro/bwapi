@@ -5,6 +5,10 @@
 
 #include <BWAPI/Client/RegionData.h>
 
+#ifdef COMPAT
+#include "CompatGameImpl.h"
+#endif
+
 namespace BWAPI
 {
   class RegionImpl : public RegionInterface
@@ -30,6 +34,11 @@ namespace BWAPI
     RegionImpl(int id);
     void UpdateRegionRelations();
     RegionData* getData();
+    
+#ifdef COMPAT
+    CompatRegionImpl compatRegionImpl{this};
+#endif
+    
   private:
     RegionData  data = RegionData();
     RegionData* self = &data;

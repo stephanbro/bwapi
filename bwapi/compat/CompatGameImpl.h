@@ -6,6 +6,8 @@ class GameImpl;
 class UnitImpl;
 class PlayerImpl;
 class BulletImpl;
+class RegionImpl;
+class ForceImpl;
 class AIModule;
 
 class CompatGameImpl {
@@ -47,6 +49,24 @@ public:
   
   void** vftable;
   BulletImpl* impl;
+};
+
+class CompatRegionImpl {
+public:
+  CompatRegionImpl(RegionImpl* impl);
+  ~CompatRegionImpl();
+  
+  void** vftable;
+  RegionImpl* impl;
+};
+
+class CompatForceImpl {
+public:
+  CompatForceImpl(ForceImpl* impl);
+  ~CompatForceImpl();
+  
+  void** vftable;
+  ForceImpl* impl;
 };
 
 }

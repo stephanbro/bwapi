@@ -3,6 +3,10 @@
 #include <BWAPI/Force.h>
 #include <BWAPI/Playerset.h>
 
+#ifdef COMPAT
+#include "CompatGameImpl.h"
+#endif
+
 namespace BWAPI
 {
   // Forwards
@@ -19,6 +23,10 @@ namespace BWAPI
       Playerset players;
       std::string name;
       void setID(int newID);
+      
+#ifdef COMPAT
+      CompatForceImpl compatForceImpl{this};
+#endif
     private:
       int id = -1;
   };
