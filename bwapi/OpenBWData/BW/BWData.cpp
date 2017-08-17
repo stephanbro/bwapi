@@ -1389,7 +1389,11 @@ int Player::playerColorIndex() const
 
 const char* Player::szName() const
 {
-  return impl->vars.character_name.c_str();
+  if (impl->vars.is_replay) {
+    return impl->replay_funcs.replay_st.player_name.at(owner).c_str();
+  } else {
+    return impl->sync_funcs.sync_st.player_names.at(owner).c_str();
+  }
 }
 
 int Player::nRace() const
