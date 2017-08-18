@@ -50,8 +50,98 @@ void fatal_error_str(a_string str){
 
 namespace BW {
 
+
 #ifdef OPENBW_ENABLE_UI
 
+struct thread_func_t {
+  struct wrapper {
+    virtual ~wrapper() {}
+    virtual void call() = 0;
+  };
+  template<typename T>
+  struct wrapper_t: wrapper {
+    T f;
+    wrapper_t(T f) : f(std::move(f)) {}
+    virtual ~wrapper_t() {}
+    virtual void call() override {
+      f();
+    }
+  };
+  std::unique_ptr<wrapper> wrapper_func;
+  thread_func_t() {}
+  thread_func_t(std::nullptr_t) {}
+  template<typename F>
+  thread_func_t(F f) {
+    wrapper_func = std::make_unique<wrapper_t<F>>(std::move(f));
+  }
+  void operator()() {
+    wrapper_func->call();
+  }
+  explicit operator bool() const {
+    return (bool)wrapper_func;
+  }
+  thread_func_t& operator=(std::nullptr_t) {
+    wrapper_func = nullptr;
+    return *this;
+  }
+  template<typename F>
+  thread_func_t& operator=(F f) {
+    wrapper_func = std::make_unique<wrapper_t<F>>(std::move(f));
+    return *this;
+  }
+};
+
+bool ui_thread_enabled = false;
+
+std::mutex ui_thread_mut;
+std::condition_variable ui_thread_cv;
+bool exit_ui_thread = false;
+thread_func_t ui_thread_func;
+std::thread ui_thread_main_thread;
+
+void ui_thread_entry() {
+  while (true) {
+    std::unique_lock<std::mutex> l(ui_thread_mut);
+    ui_thread_cv.wait(l, [&]{
+      return ui_thread_func || exit_ui_thread;
+    });
+    if (exit_ui_thread) break;
+    ui_thread_func();
+    ui_thread_func = nullptr;
+  }
+  ui_thread_main_thread.join();
+}
+
+struct ui_thread_t {
+  std::thread t;
+  ui_thread_t() {
+  }
+  ui_thread_t(const ui_thread_t&) = delete;
+  ui_thread_t(ui_thread_t&&) = default;
+  ui_thread_t& operator=(const ui_thread_t&) {
+    return *this;
+  }
+  ui_thread_t& operator=(ui_thread_t&&) {
+    return *this;
+  }
+  template<typename F>
+  ui_thread_t(F f) {
+    if (ui_thread_enabled) {
+      std::lock_guard<std::mutex> l(ui_thread_mut);
+      ui_thread_func = std::move(f);
+      ui_thread_cv.notify_one();
+    } else {
+      t = std::thread(std::forward<F>(f));
+    }
+  }
+  void join() {
+    if (ui_thread_enabled) {
+      std::lock_guard<std::mutex> l(ui_thread_mut);
+    } else {
+      t.join();
+    }
+  }
+};
 
 struct ui_functions: bwgame::ui_functions {
   using bwgame::ui_functions::ui_functions;
@@ -66,7 +156,7 @@ struct ui_functions: bwgame::ui_functions {
 struct ui_wrapper {
   std::chrono::high_resolution_clock clock;
   std::chrono::high_resolution_clock::time_point last_update;
-  std::thread ui_thread;
+  ui_thread_t ui_thread;
   bool exit_thread = false;
   bool run_update = false;
   std::mutex mut;
@@ -86,7 +176,7 @@ struct ui_wrapper {
   }
   ui_wrapper(bwgame::state& st, std::string mpq_path) {
 
-    ui_thread = std::thread([this, player = get_player(st), mpq_path]() mutable {
+    ui_thread = ui_thread_t([this, player = get_player(st), mpq_path]() mutable {
       std::unique_lock<std::mutex> l(mut);
       ui_functions ui(std::move(player));
 
@@ -197,24 +287,24 @@ struct ui_wrapper {
 struct game_vars {
   int local_player_id = -1;
   bool is_replay = false;
-  
+
   bool left_game = false;
 
   int game_type = 0;
   bool game_type_melee = false;
-  
+
   std::array<int, 7> game_speeds_frame_times{{ 167, 111, 83, 67, 56, 48, 42 }};
   int game_speed = 6;
-  
+
   std::string map_filename;
   std::string set_map_filename;
   std::string character_name;
-  
+
   std::array<int, 12> map_player_races{};
   std::array<int, 12> map_player_controllers{};
-  
+
   bool is_multi_player = false;
-  
+
   std::unordered_map<std::string, std::string> override_env_var;
 };
 
@@ -225,9 +315,9 @@ struct game_setup_helper_t {
   game_vars& vars;
   bwgame::replay_functions& replay_funcs;
   bwgame::sync_functions& sync_funcs;
-  
+
   bwgame::a_vector<uint8_t> scenario_chk_data;
-  
+
   bwgame::sync_server_noop noop_server;
   bwgame::sync_server_asio_tcp tcp_server;
 #ifndef _WIN32
@@ -240,9 +330,9 @@ struct game_setup_helper_t {
 #else
   bwgame::sync_server_noop file_server;
 #endif
-  
+
   int server_n = 0;
-  
+
   std::string env(std::string name, std::string def) {
     auto i = vars.override_env_var.find(name);
     if (i != vars.override_env_var.end()) return i->second;
@@ -250,15 +340,15 @@ struct game_setup_helper_t {
     if (!s) return def;
     return s;
   }
-  
+
   void create_single_player_game(std::function<void()> setup_function) {
     using bwgame::error;
-    
+
     vars.left_game = false;
     vars.is_multi_player = false;
-  
+
     auto& filename = vars.set_map_filename;
-    
+
     auto& global_st = *st.global;
     auto& game_st = *st.game;
     game_st = bwgame::game_state();
@@ -267,34 +357,34 @@ struct game_setup_helper_t {
     st.game = &game_st;
 
     g_global_init_if_necessary(global_st, env("OPENBW_MPQ_PATH", "."));
-    
+
     scenario_chk_data.clear();
-  
+
     std::string ext;
     size_t dot_pos = filename.rfind('.');
     if (dot_pos != std::string::npos) {
       ext = filename.substr(dot_pos + 1);
       for (auto& v : ext) v |= 0x20;
     }
-    
+
     vars.map_player_controllers = {};
     vars.map_player_races = {};
-    
+
     server_n = 0;
 
     if (ext == "rep") {
 
       replay_funcs.replay_st = bwgame::replay_state();
       replay_funcs.load_replay_file(filename, true, &scenario_chk_data);
-    
+
       vars.is_replay = true;
       vars.local_player_id = -1;
 
       vars.game_type = replay_funcs.replay_st.game_type;
       vars.game_type_melee = vars.game_type == 2;
-  
+
     } else {
-      
+
       auto name = sync_funcs.sync_st.local_client->name;
       auto* save_replay = sync_funcs.sync_st.save_replay;
       sync_funcs.action_st = bwgame::action_state();
@@ -303,14 +393,14 @@ struct game_setup_helper_t {
       sync_funcs.sync_st.save_replay = save_replay;
       if (save_replay) *save_replay = bwgame::replay_saver_state();
       bwgame::game_load_functions load_funcs(st);
-      
+
       (bwgame::data_loading::mpq_file<>(filename))(scenario_chk_data, "staredit/scenario.chk");
-      
+
       if (save_replay) {
         save_replay->map_data = scenario_chk_data.data();
         save_replay->map_data_size = scenario_chk_data.size();
       }
-    
+
       load_funcs.load_map_data(scenario_chk_data.data(), scenario_chk_data.size(), [&]() {
 
         vars.game_type = vars.game_type_melee ? 2 : 10;
@@ -334,45 +424,45 @@ struct game_setup_helper_t {
           }
           setup_function();
         }
-        
+
         sync_funcs.sync_st.setup_info = nullptr;
       });
-    
+
       vars.is_replay = false;
     }
-  
+
     vars.map_filename = filename;
   }
-  
+
   void create_multi_player_game(std::function<void()> setup_function) {
     using bwgame::error;
-    
+
     vars.left_game = false;
     vars.is_multi_player = true;
-  
+
     auto& filename = vars.set_map_filename;
-    
+
     auto& global_st = *st.global;
     auto& game_st = *st.game;
     game_st = bwgame::game_state();
     st = bwgame::state();
     st.global = &global_st;
     st.game = &game_st;
-    
+
     g_global_init_if_necessary(global_st, env("OPENBW_MPQ_PATH", "."));
-    
+
     scenario_chk_data.clear();
-  
+
     std::string ext;
     size_t dot_pos = filename.rfind('.');
     if (dot_pos != std::string::npos) {
       ext = filename.substr(dot_pos + 1);
       for (auto& v : ext) v |= 0x20;
     }
-    
+
     vars.map_player_controllers = {};
     vars.map_player_races = {};
-    
+
     server_n = 0;
 
     bool is_replay = ext == "rep";
@@ -418,8 +508,8 @@ struct game_setup_helper_t {
         tcp_server.connect(connect_hostname.c_str(), connect_port);
       } else if (server_n == 2) {
 #ifndef _WIN32
-            if (lan_mode == "LOCAL_AUTO") {
-            std::string directory = env("OPENBW_LOCAL_AUTO_DIRECTORY", "");
+        if (lan_mode == "LOCAL_AUTO") {
+          std::string directory = env("OPENBW_LOCAL_AUTO_DIRECTORY", "");
           if (directory.empty()) directory = "/tmp/openbw";
           while (!directory.empty() && *std::prev(directory.end()) == '/') directory.erase(std::prev(directory.end()));
           mkdir(directory.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
@@ -460,7 +550,7 @@ struct game_setup_helper_t {
           }
         }
 #else
-            error("OPENBW_LAN_MODE %s not supported on Windows", lan_mode);
+        error("OPENBW_LAN_MODE %s not supported on Windows", lan_mode);
 #endif
       } else if (server_n == 3) {
 #ifndef _WIN32
@@ -525,16 +615,16 @@ struct game_setup_helper_t {
         func();
       });
     }
-  
+
     vars.map_filename = filename;
   }
-  
+
   template<typename server_T>
   void leave_game(server_T& server) {
-    
+
     vars.left_game = true;
     sync_funcs.leave_game(server);
-    
+
   }
 
   void sync() {
@@ -544,7 +634,7 @@ struct game_setup_helper_t {
     else if (server_n == 3) sync_funcs.sync(file_server);
     vars.local_player_id = sync_funcs.sync_st.local_client->player_slot;
   }
-  
+
   void start_game() {
     if (server_n == 0) sync_funcs.start_game(noop_server);
     else if (server_n == 1) sync_funcs.start_game(tcp_server);
@@ -566,7 +656,7 @@ struct game_setup_helper_t {
   int connected_player_count() {
     return sync_funcs.connected_player_count();
   }
-  
+
   void set_race(int race) {
     int n = sync_funcs.sync_st.local_client->player_slot;
     if (n == -1 || st.players.at(n).race == (bwgame::race_t)race) return;
@@ -575,28 +665,28 @@ struct game_setup_helper_t {
     else if (server_n == 2) sync_funcs.set_local_client_race(local_server, (bwgame::race_t)race);
     else if (server_n == 3) sync_funcs.set_local_client_race(file_server, (bwgame::race_t)race);
   }
-  
+
   void input_action(const uint8_t* data, size_t size) {
     if (server_n == 0) sync_funcs.input_action(noop_server, data, size);
     else if (server_n == 1) sync_funcs.input_action(tcp_server, data, size);
     else if (server_n == 2) sync_funcs.input_action(local_server, data, size);
     else if (server_n == 3) sync_funcs.input_action(file_server, data, size);
   }
-  
+
   void next_frame() {
     if (server_n == 0) sync_funcs.bwapi_compatible_next_frame(noop_server);
     else if (server_n == 1) sync_funcs.bwapi_compatible_next_frame(tcp_server);
     else if (server_n == 2) sync_funcs.bwapi_compatible_next_frame(local_server);
     else if (server_n == 3) sync_funcs.bwapi_compatible_next_frame(file_server);
   }
-  
+
   void leave_game() {
     if (server_n == 0) leave_game(noop_server);
     else if (server_n == 1) leave_game(tcp_server);
     else if (server_n == 2) leave_game(local_server);
     else if (server_n == 3) leave_game(file_server);
   }
-  
+
 };
 
 template<typename F>
@@ -624,7 +714,7 @@ struct openbwapi_impl {
   bool on_draw_changed = false;
   bool speed_override = false;
   int speed_override_value = 0;
-  
+
   openbwapi_impl(game_vars& vars, bwgame::state& st, bwgame::action_state& action_st, bwgame::replay_state& replay_st, bwgame::sync_state& sync_st) : vars(vars), st(st), funcs(vars, st), replay_funcs(vars, st, action_st, replay_st), sync_funcs(vars, st, action_st, sync_st) {
     auto speed = game_setup_helper.env("OPENBW_GAME_SPEED", "");
     if (!speed.empty()) {
@@ -632,9 +722,9 @@ struct openbwapi_impl {
       speed_override_value = std::atoi(speed.c_str());
     }
   }
-  
+
   bool ui_enabled = false;
-  
+
   void enable_ui() {
     if (ui_enabled) return;
     auto str = game_setup_helper.env("OPENBW_ENABLE_UI", "1");
@@ -682,7 +772,7 @@ struct openbwapi_impl {
       if (ui->closed()) {
         game_setup_helper.leave_game();
       }
-  
+
   auto now = clock.now();
   auto speed = std::chrono::milliseconds(speed_override ? speed_override_value : vars.game_speeds_frame_times.back());
   if (speed > std::chrono::milliseconds(0)) {
@@ -758,10 +848,26 @@ struct GameOwner_impl {
   const bwgame::game_state& game_st;
   game_vars vars;
   openbwapi_impl impl;
-  
+
   GameOwner_impl() : st(fst.st), action_st(fst.action_st), game_st(fst.game_st), impl(vars, fst.st, fst.action_st, fst.replay_st, fst.sync_st) {}
-  
+
 };
+
+
+void sacrificeThreadForUI(std::function<void()> f)
+{
+#ifdef OPENBW_ENABLE_UI
+  ui_thread_enabled = true;
+  ui_thread_main_thread = std::thread([f = std::move(f)]{
+    f();
+    exit_ui_thread = true;
+    ui_thread_cv.notify_all();
+  });
+  ui_thread_entry();
+#else
+  f();
+#endif
+}
 
 GameOwner::GameOwner()
 {
@@ -873,7 +979,7 @@ int Game::screenHeight() const
 
 void Game::setScreenPosition(int x, int y)
 {
-  
+
 }
 
 int Game::NetMode() const
@@ -924,12 +1030,12 @@ void Game::setGameSpeedModifiers(int n, int value)
 
 void Game::setAltSpeedModifiers(int n, int value)
 {
-  
+
 }
 
 void Game::setFrameSkip(int value)
 {
-  
+
 }
 
 int Game::getLatencyFrames() const
@@ -1203,7 +1309,7 @@ size_t Game::UnitOrderingCount() const
 }
 
 bool Game::triggersCanAllowGameplayForPlayer(int n) const
-{ 
+{
   for (int i = 0; i != 8; ++i) {
     if (impl->funcs.st.players[i].controller != bwgame::player_t::controller_occupied) continue;
     for (auto& rt : impl->funcs.st.running_triggers[i]) {

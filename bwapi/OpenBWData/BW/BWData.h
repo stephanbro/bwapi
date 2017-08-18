@@ -28,11 +28,13 @@ struct openbwapi_impl;
 
 struct GameOwner_impl;
 
+void sacrificeThreadForUI(std::function<void()> f);
+
 struct GameOwner {
   std::unique_ptr<GameOwner_impl> impl;
   GameOwner();
   ~GameOwner();
-  
+
   Game getGame();
   void setPrintTextCallback(std::function<void(const char*)> func);
 };
@@ -64,26 +66,26 @@ struct ValuePointer {
 
 struct UnitFinderIterator {
   void* ptr;
-  
+
   using value_type = UnitFinderEntry;
   using pointer = ValuePointer<value_type>;
   using reference = value_type;
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::random_access_iterator_tag;
-  
+
   using It = UnitFinderIterator;
-  
+
   value_type operator*() const;
   It& operator++();
   bool operator==(It n) const;
-  
+
   bool operator!=(It n)const ;
   pointer operator->() const;
   It operator++(int);
-  
+
   It& operator--();
   It operator--(int);
-  
+
   It& operator+=(difference_type n);
   It operator+(difference_type n) const;
   It& operator-=(difference_type n);
@@ -124,22 +126,22 @@ template<typename T>
 struct DefaultIterator {
   some_object<sizeof(void*), alignof(void*)> obj;
   openbwapi_impl* impl = nullptr;
-  
+
   using value_type = T;
   using pointer = ValuePointer<value_type>;
   using reference = value_type;
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::forward_iterator_tag;
-  
+
   using It = DefaultIterator;
-  
+
   DefaultIterator();
   ~DefaultIterator();
-  
+
   value_type operator*() const;
   It& operator++();
   bool operator==(const It& n) const;
-  
+
   bool operator!=(const It& n)const ;
   pointer operator->() const;
   It operator++(int);
@@ -160,13 +162,13 @@ struct Snapshot {
 
 struct Game {
   openbwapi_impl* impl = nullptr;
-  
+
   void overrideEnvVar(std::string var, std::string value);
-  
+
   int g_LocalHumanID() const;
-  
+
   Player getPlayer(int n) const;
-  
+
   int gameType() const;
   int Latency() const;
   int ReplayHead_frameCount() const;
@@ -190,17 +192,17 @@ struct Game {
   void saveReplay(const std::string& filename);
   std::tuple<int, int, void*> GameScreenBuffer();
   void setOnDraw(std::function<void(uint8_t*, size_t)> onDraw);
-  
+
   template<typename T, typename... args_T>
   void QueueCommand(args_T&&... args) {
     T buf(std::forward<args_T>(args)...);
     QueueCommand(&buf, sizeof(T));
   }
   void QueueCommand(const void* buf, size_t size);
-  
+
   void leaveGame();
   bool gameClosed() const;
-  
+
   u32 ReplayVision() const;
   void setReplayVision(u32);
   void setGameSpeedModifiers(int n, int value);
@@ -215,7 +217,7 @@ struct Game {
   int countdownTimer() const;
   void setReplayRevealAll(bool);
   u32 ReplayHead_gameSeed_randSeed() const;
-  
+
   int mapTileSize_x() const;
   int mapTileSize_y() const;
   const char* mapFileName() const;
@@ -228,15 +230,15 @@ struct Game {
   int groundHeight(int tile_x, int tile_y) const;
   u8 bVisibilityFlags(int tile_x, int tile_y) const;
   u8 bExploredFlags(int tile_x, int tile_y) const;
-  
+
   Unit getUnit(size_t index) const;
   Bullet getBullet(size_t index) const;
-  
+
   bool triggersCanAllowGameplayForPlayer(int player) const;
   std::array<int, 12> bRaceInfo() const;
   std::array<int, 12> bOwnerInfo() const;
   const char* forceNames(size_t n) const;
-  
+
   BulletIterator BulletNodeTable_begin() const;
   BulletIterator BulletNodeTable_end() const;
   UnitIterator UnitNodeList_VisibleUnit_begin() const;
@@ -245,7 +247,7 @@ struct Game {
   UnitIterator UnitNodeList_HiddenUnit_end() const;
   UnitIterator UnitNodeList_ScannerSweep_begin() const;
   UnitIterator UnitNodeList_ScannerSweep_end() const;
-  
+
   void setCharacterName(const std::string& name);
   void setGameTypeMelee();
   void setGameTypeUseMapSettings();
@@ -254,11 +256,11 @@ struct Game {
   void startGame();
   void switchToSlot(int n);
   int connectedPlayerCount();
-  
+
   UnitFinderIterator UnitOrderingX() const;
   UnitFinderIterator UnitOrderingY() const;
   size_t UnitOrderingCount() const;
-  
+
   size_t regionCount() const;
   Region getRegion(size_t index) const;
   Region getRegionAt(int x, int y) const;
@@ -276,7 +278,7 @@ struct Game {
 struct Player {
   int owner = -1;
   openbwapi_impl* impl = nullptr;
-  
+
   int playerColorIndex() const;
   const char* szName() const;
   int nRace() const;
@@ -315,7 +317,7 @@ struct Player {
   int customScore() const;
   u32 playerVision() const;
   int downloadStatus() const;
-  
+
   void setRace(int race);
   void closeSlot();
   void openSlot();
@@ -324,12 +326,12 @@ struct Player {
 struct Unit {
   bwgame::unit_t* u = nullptr;
   openbwapi_impl* impl = nullptr;
-  
+
   explicit operator bool() const;
-  
+
   size_t getIndex() const;
   u16 getUnitID() const;
-  
+
   Position position() const;
   bool hasSprite() const;
   int visibilityFlags() const;
@@ -405,9 +407,9 @@ struct Unit {
 struct Bullet {
   bwgame::bullet_t* b = nullptr;
   openbwapi_impl* impl = nullptr;
-  
+
   explicit operator bool() const;
-  
+
   size_t getIndex() const;
   bool hasSprite() const;
   Position spritePosition() const;
@@ -425,7 +427,7 @@ struct Bullet {
 struct Region {
   size_t index = (size_t)-1;
   openbwapi_impl* impl = nullptr;
-  
+
   explicit operator bool() const;
   size_t getIndex() const;
   size_t groupIndex() const;
