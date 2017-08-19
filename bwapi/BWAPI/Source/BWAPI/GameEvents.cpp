@@ -204,12 +204,34 @@ namespace BWAPI
 
     if ( !this->isReplay() )
     {
+      auto utf8Substr = [&](const std::string& str, size_t pos, size_t count) {
+        std::string r;
+        size_t i = 0;
+        size_t p = 0;
+        auto next = [&]() {
+          unsigned char mask = str[i] & 0xf0;
+          ++p;
+          if (mask == 0xf0) i += 4;
+          else if (mask == 0xe0) i += 3;
+          else if (mask == 0xc0) i += 2;
+          else ++i;
+        };
+        while (p != pos && i < str.size()) next();
+        while (p != pos + count && i < str.size()) {
+          size_t li = i;
+          next();
+          if (i > str.size()) i = str.size();
+          r.append(str, li, i - li);
+        }
+        return r;
+      };
+
       if ( BWAPIPlayer )
       {
         rn_BWAPIName = BWAPIPlayer->getName();
         rn_BWAPIRace = BWAPIPlayer->getRace().getName().substr(0, 1);
       }
-      rn_MapName   = mapName().substr(0, 16);
+      rn_MapName   = utf8Substr(mapName(), 0, 16);
       rn_AlliesNames.clear();
       rn_AlliesRaces.clear();
       rn_EnemiesNames.clear();
@@ -218,7 +240,7 @@ namespace BWAPI
       {
         if ( p )
         {
-          rn_AlliesNames += p->getName().substr(0, 6);
+          rn_AlliesNames += utf8Substr(p->getName(), 0, 6);
           rn_AlliesRaces += p->getRace().getName().substr(0, 1);
         }
       }
@@ -226,7 +248,7 @@ namespace BWAPI
       {
         if ( p )
         {
-          rn_EnemiesNames += p->getType() != PlayerTypes::Computer ? p->getName().substr(0, 6) : "Comp";
+          rn_EnemiesNames += p->getType() != PlayerTypes::Computer ? utf8Substr(p->getName(), 0, 6) : "Comp";
           rn_EnemiesRaces += p->getRace().getName().substr(0, 1);
         }
       }
