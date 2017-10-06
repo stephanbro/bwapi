@@ -687,6 +687,27 @@ struct game_setup_helper_t {
     else if (server_n == 3) leave_game(file_server);
   }
 
+  void create_unit(const bwgame::unit_type_t* unit_type, bwgame::xy pos, int owner) {
+    if (server_n == 0) sync_funcs.create_unit(noop_server, unit_type, pos, owner);
+    else if (server_n == 1) sync_funcs.create_unit(tcp_server, unit_type, pos, owner);
+    else if (server_n == 2) sync_funcs.create_unit(local_server, unit_type, pos, owner);
+    else if (server_n == 3) sync_funcs.create_unit(file_server, unit_type, pos, owner);
+  }
+
+  void kill_unit(bwgame::unit_t* u) {
+    if (server_n == 0) sync_funcs.kill_unit(noop_server, u);
+    else if (server_n == 1) sync_funcs.kill_unit(tcp_server, u);
+    else if (server_n == 2) sync_funcs.kill_unit(local_server, u);
+    else if (server_n == 3) sync_funcs.kill_unit(file_server, u);
+  }
+
+  void remove_unit(bwgame::unit_t* u) {
+    if (server_n == 0) sync_funcs.remove_unit(noop_server, u);
+    else if (server_n == 1) sync_funcs.remove_unit(tcp_server, u);
+    else if (server_n == 2) sync_funcs.remove_unit(local_server, u);
+    else if (server_n == 3) sync_funcs.remove_unit(file_server, u);
+  }
+
 };
 
 template<typename F>
@@ -1438,19 +1459,32 @@ Region Game::getRegionAt(int x, int y) const
 
 Unit Game::createUnit(int owner, int unitType, int x, int y)
 {
-  return {impl->funcs.trigger_create_unit(impl->funcs.get_unit_type((bwgame::UnitTypes)unitType), {x, y}, owner), impl};
+  if (!impl->vars.is_multi_player) {
+    return {impl->funcs.trigger_create_unit(impl->funcs.get_unit_type((bwgame::UnitTypes)unitType), {x, y}, owner), impl};
+  } else {
+    impl->game_setup_helper.create_unit(impl->funcs.get_unit_type((bwgame::UnitTypes)unitType), {x, y}, owner);
+    return {nullptr, impl};
+  }
 }
 
 void Game::killUnit(Unit u)
 {
-  if (u.u) impl->funcs.kill_unit(u.u);
+  if (!impl->vars.is_multi_player) {
+    if (u.u) impl->funcs.kill_unit(u.u);
+  } else {
+    impl->game_setup_helper.kill_unit(u.u);
+  }
 }
 
 void Game::removeUnit(Unit u)
 {
-  if (u.u) {
-    impl->funcs.hide_unit(u.u);
-    impl->funcs.kill_unit(u.u);
+  if (!impl->vars.is_multi_player) {
+    if (u.u) {
+      impl->funcs.hide_unit(u.u);
+      impl->funcs.kill_unit(u.u);
+    }
+  } else {
+    impl->game_setup_helper.remove_unit(u.u);
   }
 }
 
