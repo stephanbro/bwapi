@@ -504,7 +504,7 @@ struct game_setup_helper_t {
 
     auto func = [&]() {
       if (server_n == 1) {
-            tcp_server.bind(listen_hostname.c_str(), listen_port);
+        tcp_server.bind(listen_hostname.c_str(), listen_port);
         tcp_server.connect(connect_hostname.c_str(), connect_port);
       } else if (server_n == 2) {
 #ifndef _WIN32
@@ -521,7 +521,7 @@ struct game_setup_helper_t {
             dirent* e;
             std::string fn;
             while ((e = readdir(d))) {
-                  if (!strcmp(e->d_name, ".")) continue;
+              if (!strcmp(e->d_name, ".")) continue;
               if (!strcmp(e->d_name, "..")) continue;
               fn = directory + "/" + e->d_name;
               struct stat s;
@@ -534,17 +534,17 @@ struct game_setup_helper_t {
             closedir(d);
           }
         } else if (lan_mode == "LOCAL_FD") {
-            std::string fd_str = env("OPENBW_LOCAL_FD", "");
+          std::string fd_str = env("OPENBW_LOCAL_FD", "");
           if (fd_str.empty()) error("OPENBW_LAN_MODE is LOCAL_FD but OPENBW_LOCAL_FD not specified");
           local_server.assign(std::atoi(fd_str.c_str()));
         } else {
-            std::string path = env("OPENBW_LOCAL_PATH", "");
+          std::string path = env("OPENBW_LOCAL_PATH", "");
           if (path.empty()) error("OPENBW_LAN_MODE is LOCAL but OPENBW_LOCAL_PATH not specified");
           for (int i = 0;; ++i) {
             if (local_server.try_bind(path.c_str())) break;
             if (local_server.try_connect(path.c_str())) break;
             if (i == 10) {
-                  local_server.connect(path.c_str());
+              local_server.connect(path.c_str());
               break;
             }
           }
@@ -554,7 +554,7 @@ struct game_setup_helper_t {
 #endif
       } else if (server_n == 3) {
 #ifndef _WIN32
-            int fd_read = -1;
+        int fd_read = -1;
         int fd_write = -1;
         if (lan_mode == "FD") {
             std::string fd_read_str = env("OPENBW_FD_READ", "");
@@ -564,7 +564,7 @@ struct game_setup_helper_t {
           fd_read = std::atoi(fd_read_str.c_str());
           fd_write = std::atoi(fd_write_str.c_str());
         } else {
-            std::string file_read = env("OPENBW_FILE_READ", "");
+          std::string file_read = env("OPENBW_FILE_READ", "");
           std::string file_write = env("OPENBW_FILE_WRITE", "");
           if (file_read.empty()) error("OPENBW_LAN_MODE is FILE but OPENBW_FILE_READ not specified");
           if (file_write.empty()) error("OPENBW_LAN_MODE is FILE but OPENBW_FILE_WRITE not specified");
@@ -575,7 +575,7 @@ struct game_setup_helper_t {
         }
         file_server.open(fd_read, fd_write);
 #else
-            error("OPENBW_LAN_MODE %s not supported on Windows", lan_mode);
+        error("OPENBW_LAN_MODE %s not supported on Windows", lan_mode);
 #endif
       }
 
@@ -794,19 +794,19 @@ struct openbwapi_impl {
         game_setup_helper.leave_game();
       }
 
-  auto now = clock.now();
-  auto speed = std::chrono::milliseconds(speed_override ? speed_override_value : vars.game_speeds_frame_times.back());
-  if (speed > std::chrono::milliseconds(0)) {
-    last_frame += speed;
-    auto frame_t = now - last_frame;
-    if (frame_t > speed * 8) {
-      last_frame = now - speed * 8;
-      frame_t = speed * 8;
-    }
-    if (frame_t < speed) {
-      std::this_thread::sleep_for(speed - frame_t);
-    }
-  }
+      auto now = clock.now();
+      auto speed = std::chrono::milliseconds(speed_override ? speed_override_value : vars.game_speeds_frame_times.back());
+      if (speed > std::chrono::milliseconds(0)) {
+        last_frame += speed;
+        auto frame_t = now - last_frame;
+        if (frame_t > speed * 8) {
+          last_frame = now - speed * 8;
+          frame_t = speed * 8;
+        }
+        if (frame_t < speed) {
+          std::this_thread::sleep_for(speed - frame_t);
+        }
+      }
     }
   }
 };
