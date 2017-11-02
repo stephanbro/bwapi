@@ -1550,6 +1550,11 @@ int Player::nRace() const
   return (int)impl->funcs.st.players.at(owner).race;
 }
 
+int Player::pickedRace() const
+{
+  return (int)impl->sync_funcs.sync_st.picked_races.at(owner);
+}
+
 int Player::nType() const
 {
   return (int)impl->funcs.st.players.at(owner).controller;

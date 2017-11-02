@@ -282,6 +282,7 @@ struct Player {
   int playerColorIndex() const;
   const char* szName() const;
   int nRace() const;
+  int pickedRace() const;
   int nType() const;
   int nTeam() const;
   int playerAlliances(int n) const;
