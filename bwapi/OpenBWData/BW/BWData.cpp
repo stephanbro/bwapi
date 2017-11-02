@@ -621,9 +621,12 @@ struct game_setup_helper_t {
 
   template<typename server_T>
   void leave_game(server_T& server) {
-
-    vars.left_game = true;
-    sync_funcs.leave_game(server);
+    if (!vars.left_game) {
+      vars.left_game = true;
+      if (!vars.is_replay) {
+        sync_funcs.leave_game(server);
+      }
+    }
 
   }
 
@@ -768,16 +771,22 @@ struct openbwapi_impl {
     if (ui) {
       auto l = ui->get_lock();
       if (vars.is_replay) {
-        replay_funcs.next_frame();
-        if (vars.is_multi_player) game_setup_helper.sync();
+        if (replay_funcs.is_done()) {
+          game_setup_helper.leave_game();
+        } else {
+          replay_funcs.next_frame();
+        }
       } else {
         game_setup_helper.next_frame();
       }
     } else {
       if (vars.is_replay) {
-        replay_funcs.next_frame();
-        if (vars.is_multi_player) game_setup_helper.sync();
-      } else {
+        if (replay_funcs.is_done()) {
+          game_setup_helper.leave_game();
+        } else {
+          replay_funcs.next_frame();
+        }
+       } else {
         game_setup_helper.next_frame();
       }
     }
