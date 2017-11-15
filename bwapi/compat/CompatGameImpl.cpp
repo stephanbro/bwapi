@@ -35,22 +35,22 @@ struct std_string {
   char m_buf[0x10] = {0};
   size_t m_size = 0;
   size_t m_allocated = 15;
-  
+
   void* ptr() {
     return m_allocated >= 0x10 ? *(char**)m_buf : m_buf;
   }
-  
+
   std_string() = default;
   std_string(const std::string& value) {
     assign(value.data(), value.size());
   }
-  
+
   ~std_string() {
     if (m_allocated >= 0x10) {
       msvcr120_delete(ptr());
     }
   }
-  
+
   void assign(const char* str, size_t len) {
     if (m_allocated >= 0x10) {
       msvcr120_delete(ptr());
@@ -68,9 +68,9 @@ struct std_string {
       m_size = len;
       m_allocated = len + 1;
     }
-    
+
   }
-  
+
 };
 
 template<typename T>
@@ -80,14 +80,14 @@ struct std_deque {
   size_t m_map_size = 0;
   size_t m_offset = 0;
   size_t m_size = 0;
-  
+
   const size_t n_per = 0x10 / sizeof(T);
-  
+
   std_deque() {
     proxy = (void**)msvcr120_new(2 * sizeof(void*));
     proxy[0] = this;
   }
-  
+
    ~std_deque() {
     if (m_map) {
       for (size_t i = 0; i != m_map_size; ++i) {
@@ -102,11 +102,11 @@ struct std_deque {
     }
     msvcr120_delete(proxy);
   }
-  
+
   bool empty() {
     return m_size == 0;
   }
-  
+
   void push_back(T v) {
     size_t newsize = m_size + 1;
     if (m_map_size <= (newsize + n_per - 1) / n_per) {
@@ -136,13 +136,13 @@ struct std_list {
   };
   node* m_head = nullptr;
   size_t m_size = 0;
-  
+
   std_list() {
     m_head = (node*)msvcr120_new(sizeof(node));
     m_head->next = m_head;
     m_head->prev = m_head;
   }
-  
+
   void clear() {
     auto* begin = m_head->next;
     auto* end = m_head;
@@ -155,7 +155,7 @@ struct std_list {
     m_head->prev = m_head;
     m_size = 0;
   }
-  
+
   node* insert(T value, node* before) {
     node* n = (node*)msvcr120_new(sizeof(node));
     new (&n->value) T(value);
@@ -166,25 +166,25 @@ struct std_list {
     ++m_size;
     return n;
   }
-  
+
   void push_back(T value) {
     insert(value, m_head);
   }
   T& back() {
     return m_head->prev->value;
   }
-  
+
   node* begin() {
     return m_head->next;
   }
   node* end() {
     return m_head;
   }
-  
+
   size_t size() {
     return m_size;
   }
-  
+
 };
 
 template<typename T>
@@ -192,15 +192,15 @@ struct std_vector {
   T* m_begin = nullptr;
   T* m_end = nullptr;
   T* m_cap_end = nullptr;
-  
+
   size_t size() {
     return m_end - m_begin;
   }
-  
+
   size_t capacity() {
     return m_cap_end - m_begin;
   }
-  
+
   void push_back(T val) {
     if (capacity() - size() < 1) {
       size_t oldsize = size();
@@ -217,18 +217,18 @@ struct std_vector {
     *m_end = val;
     ++m_end;
   }
-  
+
   T* begin() {
     return m_begin;
   }
   T* end() {
     return m_end;
   }
-  
+
   T& operator[](size_t index) {
     return m_begin[index];
   }
-  
+
 };
 
 template<typename T>
@@ -238,13 +238,13 @@ struct std_unordered_set {
   size_t mask = 7;
   size_t max_index = 8;
   float max_bucket_size = 1.0f;
-  
+
   std_unordered_set() {
     for (size_t i = 0; i != 0x10; ++i) {
       buckets.push_back(list.m_head);
     }
   }
-  
+
   size_t hash(void* ptr) {
     unsigned char* c = (unsigned char*)&ptr;
     size_t r = 2166136261;
@@ -258,16 +258,16 @@ struct std_unordered_set {
     r *= 16777619;
     return r;
   }
-  
+
   void clear() {
     list.clear();
     for (auto& v : buckets) v = list.m_head;
   }
-  
+
   void insert(T value) {
     size_t index = hash(value) & mask;
     if (index >= max_index) index -= mask / 2 + 1;
-    
+
     auto* begin = buckets[2 * index];
     auto* end = begin == list.end() ? begin : buckets[2 * index + 1];
     for (auto i = begin; i != end; i = i->next) {
@@ -284,10 +284,10 @@ struct std_unordered_set {
       buckets[2 * index + 1] = x;
       if (x != list.begin()) buckets[2 * index + 1] = buckets[2 * index + 1]->prev;
     }
-    
-    
+
+
   }
-  
+
 };
 
 #endif
@@ -300,18 +300,18 @@ void (*msvcr90_delete)(void*);
 void* msvcp90_std_string_ctor;
 
 struct std_string {
-  
+
   std_string() {
     throw std::runtime_error("std_string()");
   }
   std_string(const std::string& value) {
     compat::call_thiscall(msvcp90_std_string_ctor, this, (void*)value.c_str());
   }
-  
+
   ~std_string() {
     throw std::runtime_error("~std_string");
   }
-  
+
 };
 
 template<typename T>
@@ -321,7 +321,7 @@ struct std_list {
   void* pad1;
   void* pad2;
   void* pad3;
-  
+
   struct node {
     node* next = nullptr;
     node* prev = nullptr;
@@ -329,16 +329,16 @@ struct std_list {
   };
   node* m_head = nullptr;
   size_t m_size = 0;
-  
+
   std_list() {
     proxy = (void**)msvcr90_new(sizeof(void*));
     proxy[0] = this;
-    
+
     m_head = (node*)msvcr90_new(sizeof(node));
     m_head->next = m_head;
     m_head->prev = m_head;
   }
-  
+
   void clear() {
     auto* begin = m_head->next;
     auto* end = m_head;
@@ -351,7 +351,7 @@ struct std_list {
     m_head->prev = m_head;
     m_size = 0;
   }
-  
+
   node* insert(T value, node* before) {
     node* n = (node*)msvcr90_new(sizeof(node));
     new (&n->value) T(value);
@@ -362,21 +362,21 @@ struct std_list {
     ++m_size;
     return n;
   }
-  
+
   void push_back(T value) {
     insert(value, m_head);
   }
   T& back() {
     return m_head->prev->value;
   }
-  
+
   node* begin() {
     return m_head->next;
   }
   node* end() {
     return m_head;
   }
-  
+
   size_t size() {
     return m_size;
   }
@@ -393,53 +393,53 @@ struct std_set {
     char color = 1;
     char nil = 0;
   };
-  
+
   void** proxy = nullptr;
   void* pad0;
   void* pad1;
   void* pad2;
   void* pad3;
   void* pad4;
-  
+
   node* m_head = nullptr;
   size_t m_size = 0;
-  
+
   node* new_node() {
     node* r = (node*)msvcr90_new(sizeof(node));
     return new (r) node();
   }
-  
+
   std_set() {
     proxy = (void**)msvcr90_new(sizeof(void*));
     proxy[0] = this;
-    
+
     m_head = new_node();
     m_head->nil = 1;
     m_head->left = m_head;
     m_head->parent = m_head;
     m_head->right = m_head;
   }
-  
+
   ~std_set() {
     clear();
     msvcr90_delete(m_head);
     msvcr90_delete(proxy);
   }
-  
+
   static node* leftmost(node* n) {
     while (!n->left->nil) {
       n = n->left;
     }
     return n;
   }
-  
+
   static node* rightmost(node* n) {
       while (!n->right->nil) {
         n = n->right;
       }
       return n;
     }
-  
+
   void rotate_left(node* n) {
     node* swap = n->right;
     n->right = swap->left;
@@ -544,7 +544,7 @@ struct std_set {
       }
     }
   }
-  
+
   void erase(node* n) {
     while (!n->nil) {
       if (!n->right->nil) erase(n->right);
@@ -554,7 +554,7 @@ struct std_set {
       n = left;
     }
   }
-  
+
   void clear() {
     erase(m_head->parent);
     m_head->left = m_head;
@@ -562,7 +562,7 @@ struct std_set {
     m_head->right = m_head;
     m_size = 0;
   }
-  
+
   void insert(T value) {
     node* p = m_head->parent;
     node* insert_at_p = p;
@@ -575,11 +575,11 @@ struct std_set {
     }
     insert_at(insert_at_p, insert_left, value);
   }
-  
+
   bool empty() {
     return m_size == 0;
   }
-  
+
 };
 
 #endif
@@ -1055,23 +1055,23 @@ struct uninitialized<T, typename std::enable_if<std::is_reference<T>::value>::ty
 
 template<typename W, typename R, typename M, typename... A>
 auto do_thiscall_func(R(M::**f)(A...), M* m, uint32_t* args, const char* name) {
-  
+
   std::tuple<uninitialized<typename fix_argument_type<A>::type>...> c;
-  
+
   auto* result = (typename std::remove_reference<R>::type*)*args;
   if (returned_through_pointer_arg<R>::value) ++args;
-  
+
   construct_args<0, A...>()(c, args);
-  
+
   m = unwrap<W>()(m);
-  
+
   return apply(*f, m, c, result);
 }
 
 template<typename W, typename R, typename M, typename... A>
 void* generate_thiscall_func(R(M::*f)(A...), const char* name, bool is_cdecl) {
   void* func = (void*)&do_thiscall_func<W, R, M, A...>;
-  
+
   codegen_reserve(0x1000);
   uint8_t* p = codegen_pos;
   align(p, 8);
@@ -1083,16 +1083,16 @@ void* generate_thiscall_func(R(M::*f)(A...), const char* name, bool is_cdecl) {
   memcpy(name_ptr, name, namelen);
   p += namelen;
   *p++ = 0;
-  
+
   size_t n = argsize<A...>::value;
-  
+
   if (returned_through_pointer_arg<R>::value) {
     ++n;
   }
-  
+
   align(p, 16);
   void* retval = p;
-  
+
   *p++ = 0x68; // push name_ptr
   *(uint32_t*)p = (uint32_t)name_ptr;
   p += 4;
@@ -1115,9 +1115,9 @@ void* generate_thiscall_func(R(M::*f)(A...), const char* name, bool is_cdecl) {
   } else {
     *p++ = 0xc3; // ret
   }
-  
+
   codegen_pos = p;
-  
+
   return retval;
 }
 
@@ -1149,28 +1149,28 @@ struct GameImplImpl {
 #ifdef COMPAT_3_7_4
   std_set<TilePosition> startLocations;
 #endif
-  
+
   template<typename T>
   struct proxy {
     int lastUpdate = 0;
     T value;
   };
-  
+
 #ifdef COMPAT_4_1_2
   using Unitset = std_unordered_set<UnitInterface*>;
   using Playerset = std_unordered_set<PlayerInterface*>;
   using Bulletset = std_unordered_set<BulletInterface*>;
   using Regionset = std_unordered_set<RegionInterface*>;
 #endif
-  
+
 #ifdef COMPAT_3_7_4
   using Unitset = std_set<UnitInterface*>;
   using Playerset = std_set<PlayerInterface*>;
   using Bulletset = std_set<BulletInterface*>;
   using Regionset = std_set<RegionInterface*>;
-  
+
   proxy<std_set<Position>> nukeDots;
-  
+
   struct Event {
     int type;
     Position position;
@@ -1180,32 +1180,32 @@ struct GameImplImpl {
     bool winner;
   };
 #endif
-  
+
   proxy<Playerset> players;
-  
+
   proxy<Unitset> allUnits;
   proxy<Unitset> minerals;
   proxy<Unitset> geysers;
   proxy<Unitset> neutralUnits;
-  
+
   proxy<Unitset> staticMinerals;
   proxy<Unitset> staticGeysers;
   proxy<Unitset> staticNeutralUnits;
-  
+
   proxy<Bulletset> bullets;
-  
+
   proxy<Playerset> allies;
   proxy<Playerset> enemies;
   proxy<Playerset> observers;
-  
+
   proxy<Regionset> allRegions;
-  
+
   std::array<proxy<Unitset>, 12> playerUnits;
-  
+
   Unitset unitsOnTileSet;
   Unitset unitsInRectangleSet;
   Unitset unitsInRadiusSet;
-  
+
   proxy<Unitset> selectedUnits;
   proxy<std_list<Event>> events;
 };
@@ -1292,16 +1292,16 @@ auto retlist(T& proxy, const V& values) {
 }
 
 struct GameImpl_funcs {
-  
+
   template<typename F, typename... A>
   auto invoke(F f, A&&... args) {
     return compat::apply(f, (GameImpl*)this, std::forward_as_tuple(std::forward<A>(args)...));
   }
-  
+
   GameImpl* gameImpl() {
     return (GameImpl*)this;
   }
-  
+
 #ifdef COMPAT_4_1_2
   void* getStartLocations() {
     if (gameImplImpl->startLocations.empty()) {
@@ -1330,7 +1330,7 @@ struct GameImpl_funcs {
     return retset(gameImplImpl->nukeDots, gameImpl()->getNukeDots());
   }
 #endif
-  
+
   void getForces() {
     throw std::runtime_error("getForces");
   }
@@ -1377,11 +1377,11 @@ struct GameImpl_funcs {
   void* observers() {
     return retset(gameImplImpl->observers, gameImpl()->observers());
   }
-  
+
   void* getSelectedUnits() {
     return retset(gameImplImpl->selectedUnits, gameImpl()->getSelectedUnits());
   }
-  
+
 #ifdef COMPAT_3_7_4
   void* getUnitsOnTile(int tileX, int tileY) {
     return setset(gameImplImpl->unitsOnTileSet, gameImpl()->getUnitsOnTile(tileX, tileY));
@@ -1395,7 +1395,7 @@ struct GameImpl_funcs {
   void* getUnitsInRectangle(Position topLeft, Position bottomRight) {
     return getUnitsInRectangle(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y);
   }
-  
+
   void printf() {
   }
   void sendText() {
@@ -1410,18 +1410,18 @@ struct GameImpl_funcs {
   }
   void drawTextScreen() {
   }
-  
+
   void changeRace(Race) {
   }
   void* getScreenBuffer() {
     ::printf("WARNING: getScreenBuffer was called, returning null\n");
     return nullptr;
   }
-  
+
   bool setReplayVision(PlayerInterface*, bool) {
     return false;
   }
-  
+
   bool canBuildHere(Unit builder, TilePosition pos, UnitType type, bool checkExplored) {
     return gameImpl()->canBuildHere(pos, type, builder, checkExplored);
   }
@@ -1434,23 +1434,23 @@ struct GameImpl_funcs {
   bool canResearch(Unit builder, TechType type) {
     return gameImpl()->canResearch(type, builder);
   }
-    
-  
+
+
 #endif
-  
+
 };
 
 struct UnitImpl_funcs {
-  
+
   template<typename F, typename... A>
   auto invoke(F f, A&&... args) {
     return compat::apply(f, (UnitImpl*)this, std::forward_as_tuple(std::forward<A>(args)...));
   }
-  
+
   UnitImpl* unitImpl() {
     return (UnitImpl*)this;
   }
-  
+
   void canAttack() {
     throw std::runtime_error("canAttack");
   }
@@ -1469,7 +1469,7 @@ struct UnitImpl_funcs {
   void canUseTech() {
     throw std::runtime_error("canUseTech");
   }
-  
+
 #ifdef COMPAT_3_7_4
   int getUpgradeLevel(UpgradeType upgrade) {
     if ( !unitImpl()->getPlayer() ||
@@ -1496,33 +1496,33 @@ struct UnitImpl_funcs {
   bool isVisible() {
     return unitImpl()->isVisible();
   }
-  
+
   void* getUnitsInRadius(int radius) {
     return setset(gameImplImpl->unitsInRadiusSet, unitImpl()->getUnitsInRadius(radius));
   }
   void* getUnitsInWeaponRange(WeaponType weapon) {
     return setset(gameImplImpl->unitsInRadiusSet, unitImpl()->getUnitsInWeaponRange(weapon));
   }
-  
+
 #endif
-  
+
 };
 
 struct PlayerImpl_funcs {
-  
+
   template<typename F, typename... A>
   auto invoke(F f, A&&... args) {
     return compat::apply(f, (PlayerImpl*)this, std::forward_as_tuple(std::forward<A>(args)...));
   }
-  
+
   PlayerImpl* playerImpl() {
     return (PlayerImpl*)this;
   }
-  
+
   void* getUnits() {
     return retset(gameImplImpl->playerUnits.at(playerImpl()->getIndex()), playerImpl()->getUnits());
   }
-  
+
 #ifdef COMPAT_3_7_4
   int groundWeaponMaxRange(BWAPI::UnitType type) {
     return playerImpl()->weaponMaxRange(type.groundWeapon());
@@ -1537,54 +1537,54 @@ struct PlayerImpl_funcs {
     return playerImpl()->supplyTotal();
   }
 #endif
-  
+
 };
 
 struct BulletImpl_funcs {
-  
+
   template<typename F, typename... A>
   auto invoke(F f, A&&... args) {
     return compat::apply(f, (BulletImpl*)this, std::forward_as_tuple(std::forward<A>(args)...));
   }
-  
+
   BulletImpl* bulletImpl() {
     return (BulletImpl*)this;
   }
-  
+
   bool isVisible() {
     return bulletImpl()->isVisible();
   }
-  
+
 };
 
 struct RegionImpl_funcs {
-  
+
   template<typename F, typename... A>
   auto invoke(F f, A&&... args) {
     return compat::apply(f, (RegionImpl*)this, std::forward_as_tuple(std::forward<A>(args)...));
   }
-  
+
   RegionImpl* regionImpl() {
     return (RegionImpl*)this;
   }
-  
+
   void* getNeighbors() {
     throw std::runtime_error("region getNeighbors");
   }
-  
+
 };
 
 struct ForceImpl_funcs {
-  
+
   template<typename F, typename... A>
   auto invoke(F f, A&&... args) {
     return compat::apply(f, (ForceImpl*)this, std::forward_as_tuple(std::forward<A>(args)...));
   }
-  
+
   ForceImpl* forceImpl() {
     return (ForceImpl*)this;
   }
-  
+
 #ifdef COMPAT_3_7_4
   void* getPlayers(void* result) {
     std_set<Player>* r = (std_set<Player>*)r;
@@ -1593,7 +1593,7 @@ struct ForceImpl_funcs {
     return result;
   }
 #endif
-  
+
 };
 
 }
@@ -1604,7 +1604,7 @@ public:
   AIModuleWrapper(AIModule* m) : m(m) {}
   virtual ~AIModuleWrapper() {
   }
-  
+
   void import_functions() {
     auto LoadLibrary = compatGameImpl->LoadLibrary;
     auto GetProcAddress = compatGameImpl->GetProcAddress;
@@ -1631,7 +1631,7 @@ public:
     if (!msvcp90_std_string_ctor) throw std::runtime_error("failed to import function '??0?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@QAE@PBD@Z' from 'MSVCP90.dll");
 #endif
   }
-  
+
   template<typename... A>
   void vfCall(int n, A... args) {
     compat::call_thiscall((*(void***)m)[n], m, args...);
@@ -1718,15 +1718,15 @@ void* Region_vftable[0x1000];
 void* Force_vftable[0x1000];
 
 CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
-  
+
   compatGameImpl = this;
   vftable = Game_vftable;
-  
+
   compat::generate_functions();
-  
+
   using compat::wrap_thiscall;
   using compat::wrap_cdecl;
-  
+
 #ifdef COMPAT_4_1_2
   Game_vftable[0] = nullptr;
   Game_vftable[1] = wrap_thiscall<CompatGameImpl>(&GameImpl_funcs::getForces, "BWAPI::GameImpl::getForces");
@@ -1834,7 +1834,7 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Game_vftable[103] = wrap_thiscall<CompatGameImpl>(&BWAPI::GameImpl::getRegionAt, "BWAPI::GameImpl::getRegionAt");
   Game_vftable[104] = wrap_thiscall<CompatGameImpl>(&BWAPI::GameImpl::getLastEventTime, "BWAPI::GameImpl::getLastEventTime");
   Game_vftable[105] = wrap_thiscall<CompatGameImpl>(&BWAPI::GameImpl::setRevealAll, "BWAPI::GameImpl::setRevealAll");
-  
+
   Unit_vftable[0] = nullptr;
   Unit_vftable[1] = wrap_thiscall<CompatUnitImpl>((int (BWAPI::UnitImpl::*)(void)const)&BWAPI::UnitImpl::getID, "BWAPI::UnitImpl::getID");
   Unit_vftable[2] = wrap_thiscall<CompatUnitImpl>((bool (BWAPI::UnitImpl::*)(void)const)&BWAPI::UnitImpl::exists, "BWAPI::UnitImpl::exists");
@@ -2035,7 +2035,7 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Unit_vftable[197] = wrap_thiscall<CompatUnitImpl>((bool (BWAPI::UnitImpl::*)(class BWAPI::TechType,bool,bool)const)&BWAPI::UnitImpl::canUseTechPosition, "BWAPI::UnitImpl::canUseTechPosition");
   Unit_vftable[198] = wrap_thiscall<CompatUnitImpl>((bool (BWAPI::UnitImpl::*)(class BWAPI::Point<int,32>,bool,bool)const)&BWAPI::UnitImpl::canPlaceCOP, "BWAPI::UnitImpl::canPlaceCOP");
   Unit_vftable[199] = wrap_thiscall<CompatUnitImpl>((bool (BWAPI::UnitImpl::*)(bool)const)&BWAPI::UnitImpl::canPlaceCOP, "BWAPI::UnitImpl::canPlaceCOP");
-  
+
   Player_vftable[0] = nullptr;
   Player_vftable[1] = wrap_thiscall<CompatPlayerImpl>((int (BWAPI::PlayerImpl::*)(void)const)&BWAPI::PlayerImpl::getID, "BWAPI::PlayerImpl::getID");
   Player_vftable[2] = wrap_thiscall<CompatPlayerImpl>((class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > (BWAPI::PlayerImpl::*)(void)const)&BWAPI::PlayerImpl::getName, "BWAPI::PlayerImpl::getName");
@@ -2081,7 +2081,7 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Player_vftable[42] = wrap_thiscall<CompatPlayerImpl>((int (BWAPI::PlayerImpl::*)(class BWAPI::UpgradeType)const)&BWAPI::PlayerImpl::getMaxUpgradeLevel, "BWAPI::PlayerImpl::getMaxUpgradeLevel");
   Player_vftable[43] = wrap_thiscall<CompatPlayerImpl>((bool (BWAPI::PlayerImpl::*)(class BWAPI::TechType)const)&BWAPI::PlayerImpl::isResearchAvailable, "BWAPI::PlayerImpl::isResearchAvailable");
   Player_vftable[44] = wrap_thiscall<CompatPlayerImpl>((bool (BWAPI::PlayerImpl::*)(class BWAPI::UnitType)const)&BWAPI::PlayerImpl::isUnitAvailable, "BWAPI::PlayerImpl::isUnitAvailable");
-  
+
   Bullet_vftable[0] = nullptr;
   Bullet_vftable[1] = wrap_thiscall<CompatBulletImpl>((int (BWAPI::BulletImpl::*)(void)const)&BWAPI::BulletImpl::getID, "BWAPI::BulletImpl::getID");
   Bullet_vftable[2] = wrap_thiscall<CompatBulletImpl>((bool (BWAPI::BulletImpl::*)(void)const)&BWAPI::BulletImpl::exists, "BWAPI::BulletImpl::exists");
@@ -2097,7 +2097,7 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Bullet_vftable[12] = wrap_thiscall<CompatBulletImpl>((int (BWAPI::BulletImpl::*)(void)const)&BWAPI::BulletImpl::getRemoveTimer, "BWAPI::BulletImpl::getRemoveTimer");
   Bullet_vftable[13] = wrap_thiscall<CompatBulletImpl>((bool (BWAPI::BulletImpl::*)(class BWAPI::PlayerInterface *)const)&BWAPI::BulletImpl::isVisible, "BWAPI::BulletImpl::isVisible");
 #endif
-  
+
 #ifdef COMPAT_3_7_4
   Game_vftable[0] = nullptr;
   Game_vftable[1] = wrap_thiscall<CompatGameImpl>(&GameImpl_funcs::getForces, "BWAPI::GameImpl::getForces");
@@ -2248,7 +2248,7 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Game_vftable[146] = wrap_thiscall<CompatGameImpl>(&GameImpl_funcs::setReplayVision, "BWAPI::GameImpl::setReplayVision");
   Game_vftable[147] = wrap_thiscall<CompatGameImpl>((bool (BWAPI::GameImpl::*)(bool) )&BWAPI::GameImpl::setRevealAll, "BWAPI::GameImpl::setRevealAll");
   Game_vftable[148] = wrap_thiscall<CompatGameImpl>((bool (BWAPI::GameImpl::*)(void) )&BWAPI::GameImpl::isGUIEnabled, "BWAPI::GameImpl::isGUIEnabled");
-  
+
   Unit_vftable[0] = nullptr;
   Unit_vftable[1] = wrap_thiscall<CompatUnitImpl>((int (BWAPI::UnitImpl::*)(void)const)&BWAPI::UnitImpl::getID, "BWAPI::UnitImpl::getID");
   Unit_vftable[2] = wrap_thiscall<CompatUnitImpl>((int (BWAPI::UnitImpl::*)(void)const)&BWAPI::UnitImpl::getReplayID, "BWAPI::UnitImpl::getReplayID");
@@ -2431,7 +2431,7 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Unit_vftable[179] = wrap_thiscall<CompatUnitImpl>((bool (BWAPI::UnitImpl::*)(class BWAPI::TechType,BWAPI::Position) )&BWAPI::UnitImpl::useTech, "BWAPI::UnitImpl::useTech");
   Unit_vftable[180] = wrap_thiscall<CompatUnitImpl>(&UnitImpl_funcs::useTech, "BWAPI::UnitImpl::useTech");
   Unit_vftable[181] = wrap_thiscall<CompatUnitImpl>((bool (BWAPI::UnitImpl::*)(BWAPI::TilePosition))&BWAPI::UnitImpl::placeCOP, "BWAPI::UnitImpl::placeCOP");
-  
+
   Player_vftable[0] = nullptr;
   Player_vftable[1] = wrap_thiscall<CompatPlayerImpl>((int (BWAPI::PlayerImpl::*)(void)const)&BWAPI::PlayerImpl::getID, "BWAPI::PlayerImpl::getID");
   Player_vftable[2] = wrap_thiscall<CompatPlayerImpl>((class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > (BWAPI::PlayerImpl::*)(void)const)&BWAPI::PlayerImpl::getName, "BWAPI::PlayerImpl::getName");
@@ -2489,7 +2489,7 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Player_vftable[54] = wrap_thiscall<CompatPlayerImpl>((int (BWAPI::PlayerImpl::*)(class BWAPI::UpgradeType)const)&BWAPI::PlayerImpl::getMaxUpgradeLevel, "BWAPI::PlayerImpl::getMaxUpgradeLevel");
   Player_vftable[55] = wrap_thiscall<CompatPlayerImpl>((bool (BWAPI::PlayerImpl::*)(class BWAPI::TechType)const)&BWAPI::PlayerImpl::isResearchAvailable, "BWAPI::PlayerImpl::isResearchAvailable");
   Player_vftable[56] = wrap_thiscall<CompatPlayerImpl>((bool (BWAPI::PlayerImpl::*)(class BWAPI::UnitType)const)&BWAPI::PlayerImpl::isUnitAvailable, "BWAPI::PlayerImpl::isUnitAvailable");
-  
+
   Bullet_vftable[0] = nullptr;
   Bullet_vftable[1] = wrap_thiscall<CompatBulletImpl>((int (BWAPI::BulletImpl::*)(void)const)&BWAPI::BulletImpl::getID, "BWAPI::BulletImpl::getID");
   Bullet_vftable[2] = wrap_thiscall<CompatBulletImpl>((class BWAPI::PlayerInterface * (BWAPI::BulletImpl::*)(void)const)&BWAPI::BulletImpl::getPlayer, "BWAPI::BulletImpl::getPlayer");
@@ -2505,7 +2505,7 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Bullet_vftable[12] = wrap_thiscall<CompatBulletImpl>((bool (BWAPI::BulletImpl::*)(void)const)&BWAPI::BulletImpl::exists, "BWAPI::BulletImpl::exists");
   Bullet_vftable[13] = wrap_thiscall<CompatBulletImpl>((bool (BWAPI::BulletImpl::*)(class BWAPI::PlayerInterface *)const)&BWAPI::BulletImpl::isVisible, "BWAPI::BulletImpl::isVisible");
   Bullet_vftable[14] = wrap_thiscall<CompatBulletImpl>(&BulletImpl_funcs::isVisible, "BWAPI::BulletImpl::isVisible");
-  
+
   Region_vftable[0] = nullptr;
   Region_vftable[1] = wrap_thiscall<CompatRegionImpl>((int (BWAPI::RegionImpl::*)(void)const)&BWAPI::RegionImpl::getID, "BWAPI::RegionImpl::getID");
   Region_vftable[2] = wrap_thiscall<CompatRegionImpl>((int (BWAPI::RegionImpl::*)(void)const)&BWAPI::RegionImpl::getRegionGroupID, "BWAPI::RegionImpl::getRegionGroupID");
@@ -2521,18 +2521,18 @@ CompatGameImpl::CompatGameImpl(GameImpl* gameImpl) : gameImpl(gameImpl) {
   Region_vftable[12] = wrap_thiscall<CompatRegionImpl>((class BWAPI::RegionInterface * (BWAPI::RegionImpl::*)(void)const)&BWAPI::RegionImpl::getClosestAccessibleRegion, "BWAPI::RegionImpl::getClosestAccessibleRegion");
   Region_vftable[13] = wrap_thiscall<CompatRegionImpl>((class BWAPI::RegionInterface * (BWAPI::RegionImpl::*)(void)const)&BWAPI::RegionImpl::getClosestInaccessibleRegion, "BWAPI::RegionImpl::getClosestInaccessibleRegion");
   Region_vftable[14] = wrap_thiscall<CompatRegionImpl>((int (BWAPI::RegionImpl::*)(class BWAPI::RegionInterface *)const)&BWAPI::RegionImpl::getDistance, "BWAPI::RegionImpl::getDistance");
-  
+
   Force_vftable[0] = nullptr;
   Force_vftable[1] = wrap_thiscall<CompatForceImpl>(&BWAPI::ForceImpl::getID, "BWAPI::ForceImpl::getID");
   Force_vftable[2] = wrap_thiscall<CompatForceImpl>(&BWAPI::ForceImpl::getName, "BWAPI::ForceImpl::getName");
   Force_vftable[3] = wrap_thiscall<CompatForceImpl>(&ForceImpl_funcs::getPlayers, "BWAPI::ForceImpl::getPlayers");
-  
+
 #endif
-  
+
 }
 
 CompatGameImpl::~CompatGameImpl() {
-  
+
 }
 
 CompatUnitImpl::CompatUnitImpl(UnitImpl* impl) : impl(impl) {
@@ -2540,7 +2540,7 @@ CompatUnitImpl::CompatUnitImpl(UnitImpl* impl) : impl(impl) {
 }
 
 CompatUnitImpl::~CompatUnitImpl() {
-  
+
 }
 
 CompatPlayerImpl::CompatPlayerImpl(PlayerImpl* impl) : impl(impl) {
@@ -2548,7 +2548,7 @@ CompatPlayerImpl::CompatPlayerImpl(PlayerImpl* impl) : impl(impl) {
 }
 
 CompatPlayerImpl::~CompatPlayerImpl() {
-  
+
 }
 
 CompatBulletImpl::CompatBulletImpl(BulletImpl* impl) : impl(impl) {
@@ -2556,7 +2556,7 @@ CompatBulletImpl::CompatBulletImpl(BulletImpl* impl) : impl(impl) {
 }
 
 CompatBulletImpl::~CompatBulletImpl() {
-  
+
 }
 
 CompatRegionImpl::CompatRegionImpl(RegionImpl* impl) : impl(impl) {
@@ -2564,7 +2564,7 @@ CompatRegionImpl::CompatRegionImpl(RegionImpl* impl) : impl(impl) {
 }
 
 CompatRegionImpl::~CompatRegionImpl() {
-  
+
 }
 
 CompatForceImpl::CompatForceImpl(ForceImpl* impl) : impl(impl) {
@@ -2572,7 +2572,7 @@ CompatForceImpl::CompatForceImpl(ForceImpl* impl) : impl(impl) {
 }
 
 CompatForceImpl::~CompatForceImpl() {
-  
+
 }
 
 

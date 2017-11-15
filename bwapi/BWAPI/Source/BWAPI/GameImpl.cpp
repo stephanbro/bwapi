@@ -924,8 +924,9 @@ namespace BWAPI
         if (i == bwgame.g_LocalHumanID()) BWAPIPlayer = this->players[i];
       }
       setupFunction();
-      for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
-        lastKnownRaceBeforeStart[i] = Race(bwgame.getPlayer(i).nRace());
+      for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i) {
+        lastKnownRaceBeforeStart[i] = Race(bwgame.getPlayer(i).pickedRace());
+      }
       playerSet.clear();
       BWAPIPlayer = nullptr;
     });
@@ -946,7 +947,7 @@ namespace BWAPI
       for (int i = 0; i < BW::PLAYABLE_PLAYER_COUNT; ++i)
       {
         this->players[i]->setID(-1);
-        lastKnownRaceBeforeStart[i] = Race(bwgame.getPlayer(i).nRace());
+        lastKnownRaceBeforeStart[i] = Race(bwgame.getPlayer(i).pickedRace());
       }
       playerSet.clear();
       BWAPIPlayer = nullptr;
