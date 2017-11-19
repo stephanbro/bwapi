@@ -1,4 +1,5 @@
 #include "Bitmap.h"
+#include "FontUtils.h"
 #include <Util/Clamp.h>
 #include <algorithm>
 
@@ -89,108 +90,109 @@ namespace BW
 
   bool Bitmap::blitString(const char *pszStr, int x, int y, u8 bSize)
   {
-//    // verify valid size index
-//    if ( bSize > 3 || !pszStr )
-//      return false;
+    // verify valid size index
+    if ( bSize <= 0 || bSize > 3 || !pszStr )
+      return false;
 
-//    // localize pointer (TODO: get rid of this offset)
-//    Font *fnt = BWDATA::FontBase[bSize];
-//    if ( !fnt->isValid() )
-//      return false;
+    // verify if drawing should be done
+    if (  x + FontUtils::getTextWidth(pszStr, bSize)   < 0 ||
+          y + FontUtils::getTextHeight(pszStr, bSize)  < 0 ||
+          x >= this->width() ||
+          y >= this->height() )
+      return false;
 
-//    // verify if drawing should be done
-//    if (  x + fnt->getTextWidth(pszStr)   < 0 ||
-//          y + fnt->getTextHeight(pszStr)  < 0 ||
-//          x >= this->width() ||
-//          y >= this->height() )
-//      return false;
+    // Reference an unsigned character array
+    const u8 *pbChars = (BYTE*)pszStr;
 
-//    // Reference an unsigned character array
-//    const u8 *pbChars = (BYTE*)pszStr;
+    u8 lastColor = 0, color   = 0;
+    int  Xoffset   = x, Yoffset = y;
 
-//    u8 lastColor = 0, color   = 0;
-//    int  Xoffset   = x, Yoffset = y;
+    // Iterate all characters in the message
+    for ( int c = 0; pbChars[c]; ++c )
+    {
+      // Perform control character and whitespace functions
+      if ( pbChars[c] <= ' ' )
+      {
+        switch ( pbChars[c] )
+        {
+        case 1:       // restore last colour
+          color = lastColor;
+          continue;
+        case '\t':    // 9    tab
+          Xoffset += FontUtils::getCharWidth( pbChars[c], bSize);
+          continue;
+        case '\n':    // 10   newline
+          Xoffset = x;
+          Yoffset += FontUtils::maxHeight(bSize);
+          continue;
+        case 11:      // invisible
+        case 20:
+          color = (BYTE)~0;
+          continue;
+        case '\f':    // 12   formfeed
+          break;
+        case '\r':    // 13   carriage return
+        case 26:
+          continue;
+        case 18:      // right align
+          Xoffset += this->width() - FontUtils::getTextWidth(pszStr, bSize) - x;
+          continue;
+        case 19:      // center align
+          Xoffset += (this->width() - FontUtils::getTextWidth(pszStr, bSize))/2 - x;
+          continue;
+        case ' ':     // space
+          Xoffset += FontUtils::maxWidth(bSize) / 2;
+          continue;
+        default:      // colour code
+          lastColor = color;
+          color     = gbColorTable[ pbChars[c] ];
+          continue;
+        }
+      }
 
-//    // Iterate all characters in the message
-//    for ( int c = 0; pbChars[c]; ++c )
-//    {
-//      // Perform control character and whitespace functions
-//      if ( pbChars[c] <= ' ' )
-//      {
-//        switch ( pbChars[c] )
-//        {
-//        case 1:       // restore last colour
-//          color = lastColor;
-//          continue;
-//        case '\t':    // 9    tab
-//          Xoffset += fnt->getCharWidth( pbChars[c] );
-//          continue;
-//        case '\n':    // 10   newline
-//          Xoffset = x;
-//          Yoffset += fnt->maxHeight();
-//          continue;
-//        case 11:      // invisible
-//        case 20:
-//          color = (BYTE)~0;
-//          continue;
-//        case '\f':    // 12   formfeed
-//          break;
-//        case '\r':    // 13   carriage return
-//        case 26:
-//          continue;
-//        case 18:      // right align
-//          Xoffset += this->width() - fnt->getTextWidth(pszStr) - x;
-//          continue;
-//        case 19:      // center align
-//          Xoffset += (this->width() - fnt->getTextWidth(pszStr))/2 - x;
-//          continue;
-//        case ' ':     // space
-//          Xoffset += fnt->maxWidth() / 2;
-//          continue;
-//        default:      // colour code
-//          lastColor = color;
-//          color     = gbColorTable[ pbChars[c] ];
-//          continue;
-//        }
-//      }
+      // Skip if the character is not supported by the font
+      // FontChar *fntChr = FontUtils::getChar( pbChars[c] );
+      u8 ch = pbChars[c];
+      if ( !FontUtils::Char::isValid(ch, bSize) )
+        continue;
 
-//      // Skip if the character is not supported by the font
-//      FontChar *fntChr = fnt->getChar( pbChars[c] );
-//      if ( !fntChr->isValid() )
-//        continue;
+      if(color >= 24) color = 0;
+      // If the colour is not "invisible"
+      if ( color != ~0 )
+      {
+        // begin drawing character process
+        for ( int i = 0, pos = 0; pos < FontUtils::Char::height(ch, bSize) * FontUtils::Char::width(ch, bSize); ++i, ++pos )
+        {
+          // font position
+          pos += FontUtils::Char::pixelOffset(ch, bSize, i);
 
-//      // If the colour is not "invisible"
-//      if ( color != ~0 )
-//      {
-//        // begin drawing character process
-//        for ( int i = 0, pos = 0; pos < fntChr->height() * fntChr->width(); ++i, ++pos )
-//        {
-//          // font position
-//          pos += fntChr->pixelOffset(i);
+          // x offset
+          int newX = Xoffset + (FontUtils::Char::x(ch, bSize) + pos % FontUtils::Char::width(ch, bSize));
+          if ( newX >= this->width() ) break;
+          if ( newX < 0 ) continue;
 
-//          // x offset
-//          int newX = Xoffset + (fntChr->x() + pos % fntChr->width());
-//          if ( newX >= this->width() ) break;
-//          if ( newX < 0 ) continue;
+          // y offset
+          int newY = Yoffset + (FontUtils::Char::y(ch, bSize) + pos / FontUtils::Char::width(ch, bSize));
+          if ( newY >= this->height() ) break;
+          if ( newY < 0 ) continue;
 
-//          // y offset
-//          int newY = Yoffset + (fntChr->y() + pos / fntChr->width());
-//          if ( newY >= this->height() ) break;
-//          if ( newY < 0 ) continue;
+          // blit offset
+          int offset = newY * this->width() + newX;
+          if ( offset >= this->width() * this->height() ) break;
+          if ( offset < 0 ) continue;
 
-//          // blit offset
-//          int offset = newY * this->width() + newX;
-//          if ( offset >= this->width() * this->height() ) break;
-//          if ( offset < 0 ) continue;
+          // Plot pixel
+          // this->data[offset] = gbFontColors[color][FontUtils::Char::colorMask(ch, bSize, i)];
+          int pxco = FontUtils::Char::getColor(ch, bSize, i);
+          if(pxco) {
+            this->data[offset] = gbFontColors[color][8-pxco/2];
+          }
+        }
+      } // invis colour
 
-//          // Plot pixel
-//          this->data[offset] = gbFontColors[color][fntChr->colorMask(i)];
-//        }
-//      } // invis colour
-
-//      // Increment the X offset for the width of the character
-//      Xoffset += fntChr->width();
-//    }
+      // Increment the X offset for the width of the character
+      Xoffset += FontUtils::Char::width(ch, bSize);
+    }
     return true;
   }
 

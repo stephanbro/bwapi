@@ -6,6 +6,7 @@ using namespace Filter;
 
 void ExampleAIModule::onStart()
 {
+  Broodwar->setGUI(true);
   // Hello World!
   Broodwar->sendText("Hello world!");
 
@@ -64,8 +65,10 @@ void ExampleAIModule::onFrame()
   // Called once every game frame
 
   // Display the game frame rate as text in the upper left area of the screen
+  // Broodwar->setTextSize(Text::Size::Small);
   Broodwar->drawTextScreen(200, 0,  "FPS: %d", Broodwar->getFPS() );
-  Broodwar->drawTextScreen(200, 20, "Average FPS: %f", Broodwar->getAverageFPS() );
+  Broodwar->drawTextScreen(200, 20, "\15Average FPS: %f", Broodwar->getAverageFPS() );
+  // Broodwar->drawTextScreen(200, 20, "abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n1234567890-=_+");
 
   // Return if the game is a replay or is paused
   if ( Broodwar->isReplay() || Broodwar->isPaused() || !Broodwar->self() )
@@ -74,23 +77,23 @@ void ExampleAIModule::onFrame()
   for (auto &u : Broodwar->self()->getUnits())
   {
     Broodwar->drawBoxMap(u->getPosition().x, u->getPosition().y, u->getPosition().x + 16, u->getPosition().y + 32, BWAPI::Colors::Red);
+    Broodwar->drawTextMap(u->getPosition(), "HP:%d", u->getHitPoints());
   }
 
-  Broodwar->drawCircleScreen(200, 200, 41, BWAPI::Colors::Yellow,  true);
+  // Broodwar->drawCircleScreen(200, 200, 41, BWAPI::Colors::Yellow,  true);
 
   // Prevent spamming by only running our onFrame once every number of latency frames.
   // Latency frames are the number of frames before commands are processed.
   if ( Broodwar->getFrameCount() % Broodwar->getLatencyFrames() != 0 )
     return;
 
-  printf("screen pos is %d %d\n", Broodwar->getScreenPosition().x, Broodwar->getScreenPosition().y);
-  printf("screen size is %d %d\n", Broodwar->getScreenSize().x, Broodwar->getScreenSize().y);
+  //printf("screen pos is %d %d\n", Broodwar->getScreenPosition().x, Broodwar->getScreenPosition().y);
+  //printf("screen size is %d %d\n", Broodwar->getScreenSize().x, Broodwar->getScreenSize().y);
 
-  printf("--\n");
+  // printf("--\n");
   // Iterate through all the units that we own
   for (auto &u : Broodwar->self()->getUnits())
   {
-    printf("aa\n");
     //Broodwar->drawBoxMap(u->getPosition().x, u->getPosition().y, u->getPosition().x + 32, u->getPosition().y + 32, BWAPI::Colors::Red);
     // Ignore the unit if it no longer exists
     // Make sure to include this block when handling any Unit pointer!
