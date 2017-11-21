@@ -65,9 +65,12 @@ void ExampleAIModule::onFrame()
   // Called once every game frame
 
   // Display the game frame rate as text in the upper left area of the screen
-  // Broodwar->setTextSize(Text::Size::Small);
+  // Broodwar->setTextSize(Text::Size::Large);
   Broodwar->drawTextScreen(200, 0,  "FPS: %d", Broodwar->getFPS() );
-  Broodwar->drawTextScreen(200, 20, "\15Average FPS: %f", Broodwar->getAverageFPS() );
+  Broodwar->drawTextScreen(200, 20, "\7Average FPS: %f", Broodwar->getAverageFPS() );
+  // avariable color hex code: 03,04,05,06,07,08, 0e, 0f,10,11, 15,16,17,18,19, 1b,1c,1d,1e,1f
+  // avariable color oct code: 03,04,05,06,07,10, 16, 17,20,21, 25,26,27,30,31, 33,34,35,36,37
+  Broodwar->drawTextScreen(200, 40, "\3abc\4def\5ghi\6jkl\7mno\10pqr\16stu\17vwx\20yz\n\21ABC\25DEF\26GHI\27JKL\30MNO\31PQR\33STU\34VWX\35YZ\n\036012\0373456789\n!@#$%^&*()_+-=[]{}\\,<.>/?|\";:\'`~");
   // Broodwar->drawTextScreen(200, 20, "abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n1234567890-=_+");
 
   // Return if the game is a replay or is paused
