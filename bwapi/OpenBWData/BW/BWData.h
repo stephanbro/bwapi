@@ -192,6 +192,7 @@ struct Game {
   void saveReplay(const std::string& filename);
   std::tuple<int, int, void*> GameScreenBuffer();
   void setOnDraw(std::function<void(uint8_t*, size_t)> onDraw);
+  std::tuple<int, int, uint32_t*> drawGameScreen(int x, int y, int width, int height);
 
   template<typename T, typename... args_T>
   void QueueCommand(args_T&&... args) {

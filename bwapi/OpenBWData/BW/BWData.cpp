@@ -254,6 +254,39 @@ struct ui_wrapper {
     return m_screen_buffer;
   }
 };
+
+struct draw_ui_wrapper {
+  bwgame::game_player get_player(bwgame::state& st) {
+    bwgame::game_player player;
+    player.set_st(st);
+    return player;
+  }
+  ui_functions ui;
+  draw_ui_wrapper(bwgame::state& st, std::string mpq_path) : ui(get_player(st)) {
+    ui.create_window = false;
+    ui.draw_ui_elements = false;
+    ui.exit_on_close = false;
+    ui.global_volume = 0;
+    auto load_data_file = bwgame::data_loading::data_files_directory(mpq_path.c_str());
+    ui.load_data_file = [&](bwgame::a_vector<uint8_t>& data, bwgame::a_string filename) {
+      load_data_file(data, std::move(filename));
+    };
+    ui.init();
+
+    size_t screen_width = 800;
+    size_t screen_height = 600;
+
+    ui.resize(screen_width, screen_height);
+    ui.screen_pos = {(int)ui.game_st.map_width / 2 - (int)screen_width / 2, (int)ui.game_st.map_height / 2 - (int)screen_height / 2};
+  }
+  std::tuple<int, int, uint32_t*> draw(int x, int y, int width, int height) {
+    ui.screen_pos = {x, y};
+    if (ui.screen_width != width || ui.screen_height != height) ui.resize(width, height);
+    ui.update();
+    return ui.get_rgba_buffer();
+  }
+};
+
 #else
 struct ui_wrapper {
   ui_wrapper(bwgame::state& st, std::string mpq_path) {}
@@ -282,6 +315,12 @@ struct ui_wrapper {
     return nullptr;
   }
 };
+struct draw_ui_wrapper {
+  std::tuple<int, int, uint32_t*> draw(int x, int y, int width, int height) {
+    return {0, 0, nullptr};
+  }
+};
+
 #endif
 
 struct game_vars {
@@ -731,6 +770,7 @@ struct openbwapi_impl {
   game_setup_helper_t game_setup_helper{st, vars, replay_funcs, sync_funcs};
   std::function<void(const char*)> print_text_callback;
   std::unique_ptr<ui_wrapper> ui;
+  std::unique_ptr<draw_ui_wrapper> draw_ui;
   using clock_t = std::chrono::high_resolution_clock;
   clock_t clock;
   clock_t::time_point last_frame;
@@ -738,6 +778,8 @@ struct openbwapi_impl {
   bool on_draw_changed = false;
   bool speed_override = false;
   int speed_override_value = 0;
+  int screen_x = 0;
+  int screen_y = 0;
 
   openbwapi_impl(game_vars& vars, bwgame::state& st, bwgame::action_state& action_st, bwgame::replay_state& replay_st, bwgame::sync_state& sync_st) : vars(vars), st(st), funcs(vars, st), replay_funcs(vars, st, action_st, replay_st), sync_funcs(vars, st, action_st, sync_st) {
     auto speed = game_setup_helper.env("OPENBW_GAME_SPEED", "");
@@ -817,6 +859,13 @@ struct openbwapi_impl {
         }
       }
     }
+  }
+
+  std::tuple<int, int, uint32_t*> draw_game_screen(int x, int y, int width, int height) {
+    if (!draw_ui) {
+      draw_ui = std::make_unique<draw_ui_wrapper>(st, game_setup_helper.env("OPENBW_MPQ_PATH", "."));
+    }
+    return draw_ui->draw(x, y, width, height);
   }
 };
 
@@ -1448,6 +1497,11 @@ void Game::setOnDraw(std::function<void (uint8_t*, size_t)> onDraw)
 {
   impl->on_draw = onDraw;
   impl->on_draw_changed = true;
+}
+
+std::tuple<int, int, uint32_t*> Game::drawGameScreen(int x, int y, int width, int height)
+{
+  return impl->draw_game_screen(x, y, width, height);
 }
 
 size_t Game::regionCount() const

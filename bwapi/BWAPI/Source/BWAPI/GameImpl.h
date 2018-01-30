@@ -232,6 +232,7 @@ namespace BWAPI
       virtual void setRandomSeed(uint32_t value) override;
       virtual void disableTriggers() override;
       virtual BWAPI::Position getScreenSize() const override;
+      virtual std::tuple<int, int, uint32_t*> drawGameScreen(int x, int y, int width, int height) override;
 
       //Internal BWAPI commands:
       GameImpl(BW::Game bwgame);

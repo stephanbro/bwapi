@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdarg>
 #include <vector>
+#include <tuple>
 
 #include <BWAPI/Interface.h>
 #include <BWAPI/UnitType.h>
@@ -1748,6 +1749,7 @@ namespace BWAPI
     virtual void setRandomSeed(uint32_t value) = 0;
     virtual void disableTriggers() = 0;
     virtual BWAPI::Position getScreenSize() const = 0;
+    virtual std::tuple<int, int, uint32_t*> drawGameScreen(int x, int y, int width, int height) = 0;
 
   };
 

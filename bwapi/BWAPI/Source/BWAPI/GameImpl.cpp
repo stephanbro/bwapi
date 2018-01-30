@@ -1117,7 +1117,10 @@ namespace BWAPI
   {
     return {bwgame.screenWidth(), bwgame.screenHeight()};
   }
-
+  std::tuple<int, int, uint32_t*> GameImpl::drawGameScreen(int x, int y, int width, int height)
+  {
+    return bwgame.drawGameScreen(x, y, width, height);
+  }
 
 }
 
