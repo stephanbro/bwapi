@@ -53,6 +53,10 @@ These can be copied from StarCraft: BroodWar 1.16.1 or 1.18, or you can just sta
 
 BWAPI loads its configuration from bwapi-data/bwapi.ini as usual. See https://github.com/bwapi/bwapi/wiki/Configuration.
 
+the image below outlines the directory structure and required files to run OpenBW:
+
+![directory structure](https://i.imgur.com/c2nE4Go.png)
+
 OpenBW has no built-in computer player, so in single player games the opponent does not peform any actions.
 
 Keep in mind that BWAPI configuration settings can be set through environment variables, so one can for instance run
