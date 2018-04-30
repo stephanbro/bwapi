@@ -6,7 +6,6 @@ using namespace Filter;
 
 void ExampleAIModule::onStart()
 {
-  Broodwar->setGUI(true);
   // Hello World!
   Broodwar->sendText("Hello world!");
 
@@ -30,7 +29,7 @@ void ExampleAIModule::onStart()
 
     // Announce the players in the replay
     Broodwar << "The following players are in this replay:" << std::endl;
-    
+
     // Iterate all the players in the game using a std:: iterator
     Playerset players = Broodwar->getPlayers();
     for(auto p : players)
@@ -65,39 +64,21 @@ void ExampleAIModule::onFrame()
   // Called once every game frame
 
   // Display the game frame rate as text in the upper left area of the screen
-  // Broodwar->setTextSize(Text::Size::Large);
   Broodwar->drawTextScreen(200, 0,  "FPS: %d", Broodwar->getFPS() );
-  Broodwar->drawTextScreen(200, 20, "\7Average FPS: %f", Broodwar->getAverageFPS() );
-  // avariable color hex code: 03,04,05,06,07,08, 0e, 0f,10,11, 15,16,17,18,19, 1b,1c,1d,1e,1f
-  // avariable color oct code: 03,04,05,06,07,10, 16, 17,20,21, 25,26,27,30,31, 33,34,35,36,37
-  Broodwar->drawTextScreen(200, 40, "\3abc\4def\5ghi\6jkl\7mno\10pqr\16stu\17vwx\20yz\n\21ABC\25DEF\26GHI\27JKL\30MNO\31PQR\33STU\34VWX\35YZ\n\036012\0373456789\n!@#$%^&*()_+-=[]{}\\,<.>/?|\";:\'`~");
-  // Broodwar->drawTextScreen(200, 20, "abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n1234567890-=_+");
+  Broodwar->drawTextScreen(200, 20, "Average FPS: %f", Broodwar->getAverageFPS() );
 
   // Return if the game is a replay or is paused
   if ( Broodwar->isReplay() || Broodwar->isPaused() || !Broodwar->self() )
     return;
-
-  for (auto &u : Broodwar->self()->getUnits())
-  {
-    Broodwar->drawBoxMap(u->getPosition().x, u->getPosition().y, u->getPosition().x + 16, u->getPosition().y + 32, BWAPI::Colors::Red);
-    Broodwar->drawTextMap(u->getPosition(), "HP:%d", u->getHitPoints());
-  }
-
-  // Broodwar->drawCircleScreen(200, 200, 41, BWAPI::Colors::Yellow,  true);
 
   // Prevent spamming by only running our onFrame once every number of latency frames.
   // Latency frames are the number of frames before commands are processed.
   if ( Broodwar->getFrameCount() % Broodwar->getLatencyFrames() != 0 )
     return;
 
-  //printf("screen pos is %d %d\n", Broodwar->getScreenPosition().x, Broodwar->getScreenPosition().y);
-  //printf("screen size is %d %d\n", Broodwar->getScreenSize().x, Broodwar->getScreenSize().y);
-
-  // printf("--\n");
   // Iterate through all the units that we own
   for (auto &u : Broodwar->self()->getUnits())
   {
-    //Broodwar->drawBoxMap(u->getPosition().x, u->getPosition().y, u->getPosition().x + 32, u->getPosition().y + 32, BWAPI::Colors::Red);
     // Ignore the unit if it no longer exists
     // Make sure to include this block when handling any Unit pointer!
     if ( !u->exists() )
@@ -244,7 +225,7 @@ void ExampleAIModule::onNukeDetect(BWAPI::Position target)
     // if so, print the location of the nuclear strike target
     Broodwar << "Nuclear Launch Detected at " << target << std::endl;
   }
-  else 
+  else
   {
     // Otherwise, ask other players where the nuke is!
     Broodwar->sendText("Where's the nuke?");
