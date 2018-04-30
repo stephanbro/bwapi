@@ -210,7 +210,7 @@ void AutoMenuManager::onMenuFrame()
 
 #ifdef _DEBUG
   // Wait for a debugger if autoMenuPause is enabled, and in DEBUG
-  if (this->autoMenuPause != "OFF" && !IsDebuggerPresent())
+  if (this->autoMenuPause != "OFF")
     return;
 #endif
 

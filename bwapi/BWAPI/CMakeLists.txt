@@ -5,7 +5,10 @@ include_directories(
   ./Source
   ../BWAPICore
   ../Shared
+  ../OpenBWData
 )
+
+add_definitions(-DDEBUG_NEW)
 
 add_library(BWAPIObj OBJECT
   Source/Config.cpp
