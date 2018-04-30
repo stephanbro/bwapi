@@ -440,6 +440,11 @@ namespace BWAPI
       int addText(BWAPIC::Shape &s, const char* text);
 
       static std::string getTournamentString();
+
+      void onCustomAction(int player, const char* data, size_t size);
+      void saveSnapshotAction(std::string id);
+      void loadSnapshotAction(const std::string& id);
+      void deleteSnapshotAction(const std::string& id);
   };
   /**
    * Broodwar is, and always should be the ONLY instance of the Game class, it is singleton.

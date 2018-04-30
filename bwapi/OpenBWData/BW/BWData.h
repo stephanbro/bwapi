@@ -274,6 +274,9 @@ struct Game {
   void loadSnapshot(const Snapshot&);
   void setRandomSeed(uint32_t value);
   void disableTriggers();
+
+  void sendCustomAction(const void* data, size_t size);
+  void setCustomActionCallback(std::function<void(int player, const char* data, size_t size)> callback);
 };
 
 struct Player {

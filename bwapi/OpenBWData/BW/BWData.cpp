@@ -751,6 +751,13 @@ struct game_setup_helper_t {
     else if (server_n == 3) sync_funcs.remove_unit(file_server, u);
   }
 
+  void send_custom_action(const void* data, size_t size) {
+    if (server_n == 0) sync_funcs.send_custom_action(noop_server, data, size);
+    else if (server_n == 1) sync_funcs.send_custom_action(tcp_server, data, size);
+    else if (server_n == 2) sync_funcs.send_custom_action(local_server, data, size);
+    else if (server_n == 3) sync_funcs.send_custom_action(file_server, data, size);
+  }
+
 };
 
 template<typename F>
@@ -1580,11 +1587,23 @@ void Game::setRandomSeed(uint32_t value)
   impl->st.lcg_rand_state = value;
 }
 
-void Game::disableTriggers()
+void Game::disableTriggers()  
 {
   impl->st.trigger_timer = -1;
 }
 
+void Game::sendCustomAction(const void *data, size_t size)
+{
+  impl->game_setup_helper.send_custom_action(data, size);
+}
+
+void Game::setCustomActionCallback(std::function<void(int, const char* data, size_t size)> callback)
+{
+  impl->game_setup_helper.sync_funcs.on_custom_action = [callback = std::move(callback)](int player, auto& r) {
+    size_t n = r.left();
+    callback(player, (const char*)r.get_n(n), n);
+  };
+}
 
 int Player::playerColorIndex() const
 {

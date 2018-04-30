@@ -984,7 +984,166 @@ namespace BWAPI
     bwgame.removeUnit(((UnitImpl*)u)->bwunit);
   }
 
-  void BWAPI::GameImpl::saveSnapshot(std::string id)
+  namespace {
+
+  template<bool default_little_endian = true, bool bounds_checking = true>
+  struct data_reader {
+    const uint8_t* ptr = nullptr;
+    const uint8_t* begin = nullptr;
+    const uint8_t* end = nullptr;
+    data_reader() = default;
+    data_reader(const uint8_t* ptr, const uint8_t* end) : ptr(ptr), begin(ptr), end(end) {}
+    template<typename T, bool little_endian = default_little_endian>
+    T get() {
+      if (bounds_checking && left() < sizeof(T)) throw std::runtime_error("data_reader: attempt to read past end");
+      union endian_t {uint32_t a; uint8_t b;};
+      const bool native_little_endian = (endian_t{1}).b == 1;
+      if (little_endian == native_little_endian) {
+        T r;
+        memcpy(&r, ptr, sizeof(T));
+        ptr += sizeof(T);
+        return r;
+      } else {
+        T r = 0;
+        for (size_t i = 0; i < sizeof(T); ++i) {
+          r |= (T)ptr[i] << ((little_endian ? i : sizeof(T) - 1 - i) * 8);
+        }
+        ptr += sizeof(T);
+        return r;
+      }
+    }
+    void skip(size_t n) {
+      if (bounds_checking && left() < n) throw std::runtime_error("data_reader: attempt to seek past end");
+      ptr += n;
+    }
+    void seek(size_t offset) {
+      if (offset > size()) throw std::runtime_error("data_reader: attempt to seek past end");
+      ptr = begin + offset;
+    }
+    size_t left() const {
+      return end - ptr;
+    }
+    size_t size() const {
+      return (size_t)(end - begin);
+    }
+    size_t tell() const {
+      return (size_t)(ptr - begin);
+    }
+    std::string get_string() {
+      size_t n = get<uint32_t>();
+      std::string r;
+      r.reserve(n);
+      for (;n; --n) r += get<char>();
+      return r;
+    }
+  };
+
+  using data_reader_le = data_reader<true>;
+  using data_reader_be = data_reader<false>;
+
+  template<bool little_endian, typename T>
+  static inline void set_value_at(uint8_t* ptr, T value) {
+    static_assert(std::is_integral<T>::value, "can only write integers");
+    union endian_t {uint32_t a; uint8_t b;};
+    const bool native_little_endian = (endian_t{1}).b == 1;
+    if (little_endian == native_little_endian) {
+        memcpy(ptr, &value, sizeof(T));
+    } else {
+      for (size_t i = 0; i < sizeof(T); ++i) {
+        ptr[i] = value >> ((little_endian ? i : sizeof(T) - 1 - i) * 8);
+      }
+    }
+  }
+
+  template<bool default_little_endian = true>
+  struct dynamic_writer {
+    std::vector<uint8_t> vec;
+    size_t pos = 0;
+    dynamic_writer() = default;
+    dynamic_writer(size_t initial_size) : vec(initial_size) {}
+    template<typename T, bool little_endian = default_little_endian>
+    void put(T v) {
+      static_assert(std::is_integral<T>::value, "don't know how to write this type");
+      size_t n = pos;
+      skip(sizeof(T));
+      set_value_at<little_endian>(data() + n, v);
+    }
+    void skip(size_t n) {
+      pos += n;
+      if (pos >= vec.size()) {
+        if (vec.size() < 2048) vec.resize(std::max(pos, vec.size() + vec.size()));
+        else vec.resize(std::max(pos, std::max(vec.size() + vec.size() / 2, (size_t)32)));
+      }
+    }
+    void put_bytes(const uint8_t* src, size_t n) {
+      skip(n);
+      memcpy(data() + pos - n, src, n);
+    }
+    size_t size() const {
+      return pos;
+    }
+    const uint8_t* data() const {
+      return vec.data();
+    }
+    uint8_t* data() {
+      return vec.data();
+    }
+    void put_string(const std::string& str) {
+      if ((size_t)(uint32_t)str.size() != str.size()) throw std::runtime_error("put_string: string too big");
+      put<uint32_t>((uint32_t)str.size());
+      const char* c = str.data();
+      const char* e = c + str.size();
+      while (c != e) {
+        put(*c);
+        ++c;
+      }
+    }
+  };
+
+  }
+
+  void GameImpl::onCustomAction(int player, const char* data, size_t size) {
+    data_reader_le r((const uint8_t*)data, (const uint8_t*)data + size);
+
+    int id = r.get<uint8_t>();
+
+    if (id == 1) {
+      std::string id = r.get_string();
+      saveSnapshotAction(std::move(id));
+    } else if (id == 2) {
+      std::string id = r.get_string();
+      loadSnapshotAction(std::move(id));
+    } else if (id == 3) {
+      std::string id = r.get_string();
+      deleteSnapshotAction(std::move(id));
+    }
+  }
+
+  void GameImpl::saveSnapshot(std::string id)
+  {
+    dynamic_writer<> w;
+    w.put<uint8_t>(1);
+    w.put_string(id);
+    bwgame.sendCustomAction(w.data(), w.size());
+  }
+
+  void GameImpl::loadSnapshot(const std::string &id)
+  {
+    dynamic_writer<> w;
+    w.put<uint8_t>(2);
+    w.put_string(id);
+    bwgame.sendCustomAction(w.data(), w.size());
+  }
+
+  void GameImpl::deleteSnapshot(const std::string &id)
+  {
+    dynamic_writer<> w;
+    w.put<uint8_t>(3);
+    w.put_string(id);
+    bwgame.sendCustomAction(w.data(), w.size());
+  }
+
+  void GameImpl::saveSnapshotAction(std::string id)
   {
     Snapshot s;
     s.bwsnapshot = bwgame.saveSnapshot();
@@ -1006,7 +1165,7 @@ namespace BWAPI
     snapshots[std::move(id)] = std::move(s);
   }
 
-  void GameImpl::loadSnapshot(const std::string &id)
+  void GameImpl::loadSnapshotAction(const std::string &id)
   {
     auto i = snapshots.find(id);
     if (i == snapshots.end()) throw std::runtime_error("no such snapshot");
@@ -1090,7 +1249,7 @@ namespace BWAPI
     events.clear();
   }
 
-  void GameImpl::deleteSnapshot(const std::string &id)
+  void GameImpl::deleteSnapshotAction(const std::string &id)
   {
     auto i = snapshots.find(id);
     if (i != snapshots.end()) snapshots.erase(i);
