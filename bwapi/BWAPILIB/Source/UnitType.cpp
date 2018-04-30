@@ -12,6 +12,8 @@
 
 #include "../../Debug.h"
 
+template class std::allocator<BWAPI::UnitType>;
+
 namespace BWAPI
 {
   // NAMES
