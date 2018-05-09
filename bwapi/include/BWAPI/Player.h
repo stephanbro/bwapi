@@ -644,9 +644,14 @@ namespace BWAPI
     ///
     /// @since 4.1.2
     bool hasUnitTypeRequirement(UnitType unit, int amount = 1) const;
-    
+
     virtual void setRace(Race race) = 0;
     virtual void closeSlot() = 0;
     virtual void openSlot() = 0;
+
+    virtual void setUpgradeLevel(UpgradeType upgrade, int level) = 0;
+    virtual void setResearched(TechType tech, bool researched) = 0;
+    virtual void setMinerals(int value)= 0;
+    virtual void setGas(int value) = 0;
   };
 };

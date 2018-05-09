@@ -1832,6 +1832,52 @@ void Player::openSlot()
   }
 }
 
+void Player::setUpgradeLevel(int upgrade, int level)
+{
+  bwgame::sync_functions::dynamic_writer<> w;
+  w.template put<uint8_t>(210);
+  w.template put<uint8_t>(1);
+  w.template put<uint8_t>(0);
+  w.template put<uint8_t>(owner);
+  w.template put<uint8_t>(upgrade);
+  w.template put<int8_t>(level);
+  impl->game_setup_helper.input_action(w.data(), w.size());
+}
+
+void Player::setResearched(int tech, bool researched)
+{
+  bwgame::sync_functions::dynamic_writer<> w;
+  w.template put<uint8_t>(210);
+  w.template put<uint8_t>(1);
+  w.template put<uint8_t>(1);
+  w.template put<uint8_t>(owner);
+  w.template put<uint8_t>(tech);
+  w.template put<uint8_t>(researched);
+  impl->game_setup_helper.input_action(w.data(), w.size());
+}
+
+void Player::setMinerals(int value)
+{
+  bwgame::sync_functions::dynamic_writer<> w;
+  w.template put<uint8_t>(210);
+  w.template put<uint8_t>(1);
+  w.template put<uint8_t>(2);
+  w.template put<uint8_t>(owner);
+  w.template put<int32_t>(value);
+  impl->game_setup_helper.input_action(w.data(), w.size());
+}
+
+void Player::setGas(int value)
+{
+  bwgame::sync_functions::dynamic_writer<> w;
+  w.template put<uint8_t>(210);
+  w.template put<uint8_t>(1);
+  w.template put<uint8_t>(3);
+  w.template put<uint8_t>(owner);
+  w.template put<int32_t>(value);
+  impl->game_setup_helper.input_action(w.data(), w.size());
+}
+
 Unit::operator bool() const
 {
   return u != nullptr;
@@ -2199,6 +2245,39 @@ Unit Unit::rally_unit() const
 int Unit::orderState() const
 {
   return u->order_state;
+}
+
+void Unit::setHitPoints(int value)
+{
+  bwgame::sync_functions::dynamic_writer<> w;
+  w.template put<uint8_t>(210);
+  w.template put<uint8_t>(0);
+  w.template put<uint8_t>(0);
+  w.template put<uint16_t>(impl->funcs.get_unit_id(u).raw_value);
+  w.template put<int32_t>(value);
+  impl->game_setup_helper.input_action(w.data(), w.size());
+}
+
+int Unit::setShields(int value)
+{
+  bwgame::sync_functions::dynamic_writer<> w;
+  w.template put<uint8_t>(210);
+  w.template put<uint8_t>(0);
+  w.template put<uint8_t>(1);
+  w.template put<uint16_t>(impl->funcs.get_unit_id(u).raw_value);
+  w.template put<int32_t>(value);
+  impl->game_setup_helper.input_action(w.data(), w.size());
+}
+
+int Unit::setEnergy(int value)
+{
+  bwgame::sync_functions::dynamic_writer<> w;
+  w.template put<uint8_t>(210);
+  w.template put<uint8_t>(0);
+  w.template put<uint8_t>(2);
+  w.template put<uint16_t>(impl->funcs.get_unit_id(u).raw_value);
+  w.template put<int32_t>(value);
+  impl->game_setup_helper.input_action(w.data(), w.size());
 }
 
 

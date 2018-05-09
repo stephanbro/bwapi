@@ -244,6 +244,10 @@ namespace BWAPI
 
       virtual bool issueCommand(UnitCommand command) override;
 
+      virtual void setHitPoints(int value) override;
+      virtual void setShields(int value) override;
+      virtual void setEnergy(int value) override;
+
       //Internal BWAPI commands:
       UnitImpl(BW::Unit bwunit, u16 index);
       void die();

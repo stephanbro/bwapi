@@ -326,6 +326,11 @@ struct Player {
   void setRace(int race);
   void closeSlot();
   void openSlot();
+
+  void setUpgradeLevel(int upgrade, int level);
+  void setResearched(int tech, bool researched);
+  void setMinerals(int value);
+  void setGas(int value);
 };
 
 struct Unit {
@@ -407,6 +412,10 @@ struct Unit {
   Position rally_position() const;
   Unit rally_unit() const;
   int orderState() const;
+
+  void setHitPoints(int value);
+  int setShields(int value);
+  int setEnergy(int value);
 };
 
 struct Bullet {

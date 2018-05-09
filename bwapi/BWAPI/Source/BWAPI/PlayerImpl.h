@@ -91,6 +91,11 @@ namespace BWAPI
       virtual void closeSlot() override;
       virtual void openSlot() override;
 
+      virtual void setUpgradeLevel(UpgradeType upgrade, int level) override;
+      virtual void setResearched(TechType tech, bool researched) override;
+      virtual void setMinerals(int value) override;
+      virtual void setGas(int value) override;
+
       //Internal BWAPI commands:
       /**
        * Constructs new player

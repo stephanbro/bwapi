@@ -216,4 +216,19 @@ namespace BWAPI
   {
     return (u16)bwunit.getIndex();
   }
+
+  void UnitImpl::setHitPoints(int value)
+  {
+    bwunit.setHitPoints(value);
+  }
+
+  void UnitImpl::setShields(int value)
+  {
+    bwunit.setShields(value);
+  }
+
+  void UnitImpl::setEnergy(int value)
+  {
+    bwunit.setEnergy(value);
+  }
 };

@@ -306,4 +306,23 @@ namespace BWAPI
     if (BroodwarImpl.isInGame()) return;
     bwplayer.openSlot();
   }
+  void PlayerImpl::setUpgradeLevel(UpgradeType upgrade, int level)
+  {
+    bwplayer.setUpgradeLevel((int)upgrade, level);
+  }
+
+  void PlayerImpl::setResearched(TechType tech, bool researched)
+  {
+    bwplayer.setResearched((int)tech, researched);
+  }
+
+  void PlayerImpl::setMinerals(int value)
+  {
+    bwplayer.setMinerals(value);
+  }
+
+  void PlayerImpl::setGas(int value)
+  {
+    bwplayer.setGas(value);
+  }
 }

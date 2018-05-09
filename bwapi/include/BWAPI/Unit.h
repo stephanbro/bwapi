@@ -2572,6 +2572,10 @@ namespace BWAPI
     /// @see Game::getLastError, UnitInterface::canIssueCommand, UnitInterface::placeCOP
     virtual bool canPlaceCOP(TilePosition target, bool checkCanIssueCommandType = true, bool checkCommandibility = true) const = 0;
 
+    virtual void setHitPoints(int value) = 0;
+    virtual void setShields(int value) = 0;
+    virtual void setEnergy(int value) = 0;
+
     ///@}
   };
 }
