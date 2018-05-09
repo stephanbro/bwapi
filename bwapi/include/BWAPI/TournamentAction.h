@@ -15,7 +15,7 @@ namespace BWAPI
 
       /// @see Game::pauseGame
       PauseGame,
-      
+
       /// @see Game::resumeGame
       ResumeGame,
 
@@ -50,5 +50,5 @@ namespace BWAPI
       SetCommandOptimizationLevel
     };
 
-  };
-};
+  }
+}

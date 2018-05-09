@@ -88,15 +88,15 @@ namespace BWAPI
     /// <summary>A convenience for use with if statements to identify if a position is valid.</summary>
     /// @see isValid
     explicit operator bool() const { return this->isValid(); };
-    
+
     bool operator == (const Point<T,Scale> &pos) const
-    { 
+    {
       return std::tie(this->x, this->y) == std::tie(pos.x, pos.y);
-    }; 
+    };
     bool operator != (const Point<T,Scale> &pos) const
-    { 
+    {
       return !(*this == pos);
-    }; 
+    };
 
     /// <summary>A less than operator that enables positions to be used by additional STL containers.</summary>
     /// Compares lexicographically the x position, followed by the y position.
@@ -275,7 +275,7 @@ namespace BWAPI
     {
       return ((*this) - position).getLength();
     };
-    
+
     /// <summary>Gets the length of this point from the top left corner of the map.</summary>
     ///
     /// @note This function impedes performance. In most cases you should use getApproxDistance.
@@ -284,11 +284,11 @@ namespace BWAPI
     /// @see getApproxDistance
     double getLength() const
     {
-      double x = (double)this->x;
-      double y = (double)this->y;
-      return sqrt(x * x + y * y);
+      double localX = (double)this->x;
+      double localY = (double)this->y;
+      return sqrt(localX * localX + localY * localY);
     };
-    
+
     /// <summary>Retrieves the approximate distance using an algorithm from Starcraft: Broodwar.</summary>
     ///
     /// @note This is a direct distance calculation that ignores all collision.
@@ -311,12 +311,12 @@ namespace BWAPI
         std::swap(min, max);
 
       if ( min < (max >> 2) )
-        return max;
+        return (int)max;
 
       unsigned int minCalc = (3*min) >> 3;
-      return (minCalc >> 5) + minCalc + max - (max >> 4) - (max >> 6);
+      return (int)((minCalc >> 5) + minCalc + max - (max >> 4) - (max >> 6));
     };
-    
+
     /// <summary>Sets the maximum x and y values.</summary> If the  current x or y values exceed
     /// the given maximum, then values are set to the maximum.
     ///
@@ -343,7 +343,7 @@ namespace BWAPI
       this->setMax(max.x, max.y);
       return *this;
     };
-    
+
     /// <summary>Sets the minimum x and y values.</summary> If the current x or y values are
     /// below the given minimum, then values are set to the minimum.
     ///
@@ -384,7 +384,7 @@ namespace BWAPI
   /// <summary>The scale of a @ref Position. Each position corresponds to a 1x1 pixel area.</summary>
   /// @see Position
   const int POSITION_SCALE = 1;
-  
+
   /// <summary>The scale of a @ref WalkPosition. Each walk position corresponds to an 8x8 pixel area.</summary>
   /// @see WalkPosition
   const int WALKPOSITION_SCALE = 8;

@@ -77,11 +77,11 @@ namespace BWAPI
       bool operator!=(const UnitCommand& other) const;
 
       template <class T, int S>
-      void assignTarget(Point<T, S> target)
+      void assignTarget(Point<T, S> targetIn)
       {
-        target.makeValid();
-        x = target.x;
-        y = target.y;
+        targetIn.makeValid();
+        x = targetIn.x;
+        y = targetIn.y;
       }
 
       Unit unit = nullptr;

@@ -28,7 +28,7 @@ namespace BWAPI
         Unknown,
         MAX
       };
-    };
+    }
   }
 
   /// <summary>The Race object is used to get information about a particular race.</summary> For
@@ -44,7 +44,7 @@ namespace BWAPI
       constexpr Race(int id = Races::Enum::None) : Type(id) {}
 
       /// <summary>Retrieves the default worker type for this Race.</summary>
-      /// 
+      ///
       /// @note In Starcraft, workers are the units that are used to construct structures.
       ///
       /// @returns UnitType of the worker that this race uses.
@@ -55,7 +55,7 @@ namespace BWAPI
       ///
       /// @note In Starcraft, the center is the very first structure of the Race's technology
       /// tree. Also known as its base of operations or resource depot.
-      /// 
+      ///
       /// @returns UnitType of the center that this race uses.
       ///
       /// @since 4.2.0
@@ -74,16 +74,16 @@ namespace BWAPI
       ///
       /// @note In Starcraft, you must first construct a structure over a @Geyser in order to
       /// begin harvesting Vespene Gas.
-      /// 
+      ///
       /// @returns UnitType of the structure used to harvest gas.
       UnitType getRefinery() const;
 
-      /// <summary>Retrieves the default transport UnitType for this race that is used to transport ground 
+      /// <summary>Retrieves the default transport UnitType for this race that is used to transport ground
       /// units across the map.</summary>
       ///
       /// @note In Starcraft, transports will allow you to carry ground units over unpassable
       /// terrain.
-      /// 
+      ///
       /// @returns UnitType for transportation.
       UnitType getTransport() const;
 
@@ -92,7 +92,7 @@ namespace BWAPI
       ///
       /// @note In Starcraft, training, morphing, or warping in units requires that the player
       /// has sufficient supply available for their Race.
-      /// 
+      ///
       /// @returns UnitType that provides the player with supply.
       UnitType getSupplyProvider() const;
   };

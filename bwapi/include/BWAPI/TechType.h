@@ -62,7 +62,7 @@ namespace BWAPI
         Unknown,
         MAX
       };
-    };
+    }
   }
   /// <summary>The TechType (or Technology Type, also referred to as an Ability) represents a Unit's ability
   /// which can be researched with UnitInterface::research or used with UnitInterface::useTech.</summary>
@@ -208,7 +208,7 @@ namespace BWAPI
 
     constexpr TechType None{Enum::None};
     constexpr TechType Unknown{Enum::Unknown};
-  };
+  }
 
   static_assert(sizeof(TechType) == sizeof(int), "Expected type to resolve to primitive size.");
 }

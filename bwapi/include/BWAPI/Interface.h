@@ -49,7 +49,7 @@ namespace BWAPI
     /// <param name="key">
     ///   The key containing the value to retrieve. Default is 0.
     /// </param>
-    /// 
+    ///
     /// @retval nullptr if index is out of bounds.
     /// @returns The client info at the given index.
     /// @see setClientInfo
@@ -70,7 +70,7 @@ namespace BWAPI
     CT getClientInfo(int key = 0) const
     {
       return (CT)(long)this->getClientInfo(key);
-    };
+    }
 
     /// <summary>Associates one or more pointers or values with any BWAPI interface.</summary>
     ///
@@ -89,10 +89,10 @@ namespace BWAPI
     ///
     /// @see getClientInfo
     template < typename V >
-    void setClientInfo(const V &clientInfo, int key = 0)
+    void setClientInfo(const V &clientInfoIn, int key = 0)
     {
-      this->clientInfo[key] = (void*)clientInfo;
-    };
+      this->clientInfo[key] = (void*)clientInfoIn;
+    }
 
     /// <summary>Registers an event and associates it with the current Interface object.</summary>
     /// Events can be used to automate tasks (like train X @Marines until Y of them have been

@@ -62,27 +62,27 @@ namespace BWAPI
     // Division
     template <typename T>
     CompareFilter<PType,RType,std::function<RType(PType)> > operator /(const T &other) const
-    {   
+    {
       return [=](PType v)->int{ int rval = other(v);
                                  return rval == 0 ? std::numeric_limits<int>::max() : (*this)(v) / rval;
                                };
-    };
+    }
 
     // Modulus
     template <typename T>
     CompareFilter<PType,RType,std::function<RType(PType)> > operator %(const T &other) const
-    {   
+    {
       return [=](PType v)->int{ int rval = other(v);
                                  return rval == 0 ? 0 : (*this)(v) % rval;
                                };
-    };
+    }
 
     // call
     inline RType operator()(PType u) const
     {
       return pred(u);
     };
-    
+
     inline bool isValid() const
     {
       return (bool)pred;

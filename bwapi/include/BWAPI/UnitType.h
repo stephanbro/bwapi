@@ -263,7 +263,7 @@ namespace BWAPI
         MAX
       };
 
-    };
+    }
   }
   /// <summary>The UnitType is used to get information about a particular type of unit, such as its cost,
   /// build time, weapon, hit points, abilities, etc.</summary>
@@ -305,7 +305,7 @@ namespace BWAPI
     /// @retval TechTypes::None If creating this unit type does not require a technology to be
     /// researched.
     TechType requiredTech() const;
-    
+
     /// <summary>Retrieves the cloaking technology associated with certain units.</summary>
     ///
     /// @returns TechType referring to the cloaking technology that this unit type uses as an
@@ -409,7 +409,7 @@ namespace BWAPI
 
     /// <summary>Retrieves the amount of space provided by this @Bunker or @Transport for unit
     /// transportation.</summary>
-    /// 
+    ///
     /// @returns The number of slots provided by this unit type.
     /// @see spaceRequired
     int spaceProvided() const;
@@ -831,7 +831,7 @@ namespace BWAPI
     bool producesLarva() const;
 
     /// <summary>Checks if this unit type is a mineral field and contains a resource amount.</summary>
-    /// This indicates that the unit type is either UnitTypes::Resource_Mineral_Field, 
+    /// This indicates that the unit type is either UnitTypes::Resource_Mineral_Field,
     /// UnitTypes::Resource_Mineral_Field_Type_2, or UnitTypes::Resource_Mineral_Field_Type_3.
     ///
     /// @returns true if this unit type is a mineral field resource.
@@ -879,7 +879,7 @@ namespace BWAPI
     const UnitType::set& buildsWhat() const;
 
     /// <summary>Retrieves the set of technologies that this unit type is capable of researching.</summary>
-    /// 
+    ///
     /// @note Some maps have special parameters that disable certain technologies. Use
     /// PlayerInterface::isResearchAvailable to determine if a technology is actually available in the
     /// current game for a specific player.
@@ -940,7 +940,7 @@ namespace BWAPI
     ///
     /// @returns The maximum width of all unit types, in pixels.
     int maxUnitWidth();
-    
+
     /// <summary>Retrieves the maximum unit height from the set of all units.</summary> Used
     /// internally to search through unit positions efficiently.
     ///

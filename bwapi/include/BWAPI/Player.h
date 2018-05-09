@@ -654,4 +654,4 @@ namespace BWAPI
     virtual void setMinerals(int value)= 0;
     virtual void setGas(int value) = 0;
   };
-};
+}

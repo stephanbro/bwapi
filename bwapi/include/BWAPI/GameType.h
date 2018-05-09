@@ -37,8 +37,8 @@ namespace BWAPI
         Unknown,
         MAX
       };
-    };
-  };
+    }
+  }
   /// <summary>A class that represents game types in Broodwar.</summary> A game type is selected
   /// when creating a game.
   ///
@@ -58,7 +58,7 @@ namespace BWAPI
     ///
     /// @returns Set of available GameTypes.
     const GameType::set& allGameTypes();
-    
+
     constexpr GameType Melee{Enum::Melee};
     constexpr GameType Free_For_All{Enum::Free_For_All};
     constexpr GameType One_on_One{Enum::One_on_One};

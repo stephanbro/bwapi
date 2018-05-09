@@ -30,10 +30,10 @@ namespace BWAPI
         Unknown,
         MAX
       };
-    };
-  };
+    }
+  }
   /// <summary>Represents the type of controller for the player slot (i.e. human, computer).</summary>
-  /// 
+  ///
   /// @see PlayerTypes
   /// @ingroup TypeClasses
   class PlayerType : public Type<PlayerType, PlayerTypes::Enum::Unknown>
@@ -64,7 +64,7 @@ namespace BWAPI
     ///
     /// @returns Set consisting of all valid PlayerTypes.
     const PlayerType::set& allPlayerTypes();
-    
+
     constexpr PlayerType None{Enum::None};
     constexpr PlayerType Computer{Enum::Computer};
     constexpr PlayerType Player{Enum::Player};

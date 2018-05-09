@@ -33,7 +33,7 @@ namespace BWAPI
   typedef PlayerInterface *Player;
   class Playerset;
   class Race;
-  
+
   class RegionInterface;
   typedef RegionInterface *Region;
 
@@ -218,7 +218,7 @@ namespace BWAPI
     /// Example:
     /// @code
     ///   BWAPI::Broodwar->setLocalSpeed(0);
-    ///   
+    ///
     ///   // Log and display the best logical FPS seen in the game
     ///   static int bestFPS = 0;
     ///   bestFPS = std::max(bestFPS, BWAPI::Broodwar->getFPS());
@@ -460,7 +460,7 @@ namespace BWAPI
     ///   The distance from \p center to search for units. If omitted, then the entire map is
     ///   searched.
     /// </param>
-    /// 
+    ///
     /// @returns The desired unit that best matches the given criteria.
     /// @retval nullptr if a suitable unit was not found.
     ///
@@ -604,7 +604,7 @@ namespace BWAPI
     /// <param name="tileY">
     ///   The y value of the tile to check.
     /// </param>
-    /// 
+    ///
     /// @returns boolean identifying the visibility of the tile. If the given tile is visible, then
     /// the value is true. If the given tile is concealed by the fog of war, then this value will
     /// be false.
@@ -622,7 +622,7 @@ namespace BWAPI
     /// <param name="tileY">
     ///   The y tile coordinate to check.
     /// </param>
-    /// 
+    ///
     /// @retval true If the player has explored the given tile position (partially revealed fog).
     /// @retval false If the tile position was never explored (completely black fog).
     ///
@@ -680,7 +680,7 @@ namespace BWAPI
     ///   omitted, then only the immediate tile position is checked for power, and the function
     ///   will assume that the location requires power for any unit type.
     /// </param>
-    ///   
+    ///
     /// @retval true if the type at the given tile position will receive power.
     /// @retval false if the type will be unpowered at the given tile position.
     bool hasPower(int tileX, int tileY, UnitType unitType = UnitTypes::None) const;
@@ -792,9 +792,9 @@ namespace BWAPI
     /// <summary>Prints text to the screen as a notification.</summary> This function allows text
     /// formatting using Text::Enum members. The behaviour of this function is the same as printf,
     /// located in header cstdio.
-    /// 
+    ///
     /// @note That text printed through this function is not seen by other players or in replays.
-    /// 
+    ///
     /// <param name="format">
     ///   Text formatting. See std::printf for more information. Refrain from passing non-constant
     ///   strings directly in this parameter.
@@ -816,7 +816,7 @@ namespace BWAPI
     ///
     /// @see printf
 /*55*/    virtual void vPrintf(const char *format, va_list args) = 0;
-    
+
     /// <summary>Sends a text message to all other players in the game.</summary> The behaviour of
     /// this function is the same as std::printf, located in header cstdio.
     ///
@@ -829,7 +829,7 @@ namespace BWAPI
     ///
     /// @see sendTextEx, std::printf
     void sendText(const char *format, ...);
-    
+
     /// @copydoc sendText
     ///
     /// This function is intended to forward an already-existing argument list.
@@ -856,7 +856,7 @@ namespace BWAPI
     ///
     /// @see sendText, std::printf
     void sendTextEx(bool toAllies, const char *format, ...);
-    
+
     /// @copydoc sendTextEx
     ///
     /// This function is intended to forward an already-existing argument list.
@@ -959,13 +959,13 @@ namespace BWAPI
     /// <summary>Retrieves the set of units that are currently selected by the user outside of
     /// BWAPI.</summary> This function requires that Flag::UserInput be enabled.
     ///
-    /// @returns A Unitset containing the user's selected units. If Flag::UserInput is disabled, 
+    /// @returns A Unitset containing the user's selected units. If Flag::UserInput is disabled,
     /// then this set is always empty.
     ///
     /// @see enableFlag
     virtual const Unitset& getSelectedUnits() const = 0;
 
-    /// <summary>Retrieves the player object that BWAPI is controlling.</summary> 
+    /// <summary>Retrieves the player object that BWAPI is controlling.</summary>
     ///
     /// @returns Pointer to Player interface object representing the current player.
     /// @retval nullptr if the current game is a replay.
@@ -1318,7 +1318,7 @@ namespace BWAPI
     /// frame.
     /// @see getRemainingLatencyTime, getLatencyFrames
     virtual int getRemainingLatencyFrames() const = 0;
-    
+
     /// <summary>Retrieves the number of milliseconds it will take before a command sent in the
     /// current frame will be executed by Broodwar.</summary>
     ///
@@ -1450,7 +1450,7 @@ namespace BWAPI
     ///
     /// @note If making queries on a unit, it's better to call UnitInterface::hasPath, since it is
     /// a more lenient version of this function that accounts for some edge cases.
-    /// 
+    ///
     /// <param name="source">
     ///   The source position.
     /// </param>
@@ -1568,7 +1568,7 @@ namespace BWAPI
     ///         - Cancel_Upgrade
     ///         .
     ///       .
-    ///     - 3: Extensive optimization 
+    ///     - 3: Extensive optimization
     ///       - Includes the optimizations made by all previous levels.
     ///       - Units may behave or move differently than expected.
     ///       - Units performing the following actions are grouped and ordered 12 at a time:
@@ -1730,7 +1730,7 @@ namespace BWAPI
     /// @returns This game's random seed.
     /// @since 4.2.0
     virtual unsigned getRandomSeed() const = 0;
-    
+
     virtual void setCharacterName(const std::string& name) = 0;
     virtual void setGameType(GameType gameType) = 0;
     virtual void setAIModule(AIModule* module) = 0;
@@ -1775,10 +1775,10 @@ namespace BWAPI
       // Pass whatever into the stream
       ss << in;
       return *this;
-    };
+    }
     /// @overload
     GameWrapper &operator <<(ostream_manipulator fn);
-    
+
     /// <summary>Flushes the Broodwar stream, printing all text in the stream to the screen.</summary>
     void flush();
   };

@@ -48,9 +48,9 @@ namespace BWAPI
         Unknown,
         MAX
       };
-    };
-  };
-  
+    }
+  }
+
   /// <summary>The Error object is generally used to determine why certain functions in BWAPI
   /// have failed.</summary>
   ///
@@ -71,7 +71,7 @@ namespace BWAPI
     ///
     /// @returns Set of error types.
     const Error::set& allErrors();
-    
+
     constexpr Error Unit_Does_Not_Exist{Enum::Unit_Does_Not_Exist};
     constexpr Error Unit_Not_Visible{Enum::Unit_Not_Visible};
     constexpr Error Unit_Not_Owned{Enum::Unit_Not_Owned};

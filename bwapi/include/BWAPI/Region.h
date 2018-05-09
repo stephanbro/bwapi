@@ -133,4 +133,4 @@ namespace BWAPI
     /// @see UnitFilter
     Unitset getUnits(const UnitFilter &pred = nullptr) const;
   };
-};
+}
